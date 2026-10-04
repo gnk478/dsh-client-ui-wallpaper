@@ -46,7 +46,7 @@
   },
   "scripts": {
     "check": "node scripts/check.mjs",
-    "install": "node scripts/install.mjs",
+    "install:plugin": "node scripts/install.mjs",
     "install:desktop": "node scripts/install.mjs --profile desktop",
     "prepublishOnly": "node scripts/check.mjs"
   },
