@@ -44,6 +44,7 @@ CSS + WINDOW_CSS + BLUR_CSS + SIDEBAR_LEFT_CSS + SIDEBAR_CSS + PANEL_CSS
 - **自动对比**：`applyAutoInk()` 只处理自带背景的气泡/工具栏等；打标键 = 外观 epoch + 元素背景色，避免旧色滞留
 - **缓存**：面板数据 `panelDataCache` / `panelCfgCache`；视频帧缓存放 `window.__dshWpVideoFrames` + sessionStorage（客户端热替换会重置模块级变量）
 - **轮换与省电**：轮换取下一项走 `nextIndex()`（state `shuffle` 为真时随机且不重复当前项）；`document.visibilitychange` → `setPlayback()` 暂停/续播所有 `<video>`，隐藏期间只记 `pendingPaint`、回前台再补画
+- **交叉淡入淡出（crossfade）**：换壁纸时新节点 `data-dsh-wp-current` 插到常驻 `.dsh-wallpaper-scrim` 之前（面纱必须始终是最后一个子元素），旧节点留在下层由 `paint()` 给新节点加 `opacity 0 → 1`（`FADE_MS = 700`、`ease-out`）过渡，`FADE_MS + 80` 后 `retire()` 暂停并移除旧节点；`currentMedia()` 统一按当前节点取色，避免旧图层让自动字色闪错；首次绘制、重绘同一节点、`document.hidden`、`prefers-reduced-motion: reduce` 都直接替换
 
 ## 文件与状态
 
