@@ -1,5 +1,7 @@
 # dsh-client-ui-wallpaper
 
+[![check](https://github.com/gnk478/dsh-client-ui-wallpaper/actions/workflows/check.yml/badge.svg)](https://github.com/gnk478/dsh-client-ui-wallpaper/actions/workflows/check.yml)
+
 把本地图片 / 视频（例如 [Dynamic Wallpaper.app](https://apps.apple.com/app/id1505218567) 播放列表里的素材）
 用作 **DSH 桌面客户端**的背景：整窗铺满、背景模糊、面板与左右侧栏透明度分别可控，字色跟着壁纸明暗自动切换。
 
