@@ -166,7 +166,7 @@ dsh-client-ui-wallpaper/
 
   ```bash
   node scripts/check.mjs
-  node --test                                          # 行为测试（mock ctx：路由 / 回收站 / 缩略图 GC / 随机轮换）
+  node --test                                          # 行为测试（mock ctx：路由 / 回收站 / 缩略图 GC / 随机轮换 / crossfade）
   curl -s http://127.0.0.1:19387/wallpaper/_client | python3 -m json.tool | head -40   # 客户端自报状态
   curl -s http://127.0.0.1:19387/wallpaper/_hits                                        # 各路由请求计数
   ```
@@ -180,7 +180,7 @@ dsh-client-ui-wallpaper/
 3. 推 tag 或手动触发 [`.github/workflows/publish.yml`](.github/workflows/publish.yml)：
 
 ```bash
-git tag v1.0.1 && git push origin v1.0.1   # tag 触发
+git tag v1.1.1 && git push origin v1.1.1   # tag 触发
 gh workflow run publish.yml                 # 或手动触发
 ```
 
@@ -190,8 +190,8 @@ gh workflow run publish.yml                 # 或手动触发
 **Release 附件**：
 
 ```bash
-git archive --format=zip -o dsh-client-ui-wallpaper-1.0.1.zip HEAD
-gh release create v1.0.1 dsh-client-ui-wallpaper-1.0.1.zip
+git archive --format=zip -o dsh-client-ui-wallpaper-1.1.1.zip HEAD
+gh release create v1.1.1 dsh-client-ui-wallpaper-1.1.1.zip
 ```
 
 **CI**：[`.github/workflows/check.yml`](.github/workflows/check.yml) 在 push / PR 时跑 `node scripts/check.mjs` 与 `node --test`，也是顶部徽章的来源；两个工作流的副本放在 `examples/` 下方便复制。
@@ -204,6 +204,7 @@ gh release create v1.0.1 dsh-client-ui-wallpaper-1.0.1.zip
 | 侧栏/右栏透明度拖了没反应 | 常见于「透明化扫描」清掉了底色；本版本已对右栏跳过扫描并直接写 `background-color`。若自行改过选择器，核对 `SIDEBAR_CSS` / `SIDEBAR_LEFT_CSS` |
 | 代码块字看不清 | 代码块应「只跟外观走」；检查 `CODEFIX_CSS` 是否注入 |
 | 视频缩略图一直是灰的 | 首次访问 `/wallpaper/thumb/<name>` 会调 `qlmanage` 抽帧，稍等再刷新；检查 `~/.dsh/wallpaper-thumbs/` |
+| 换壁纸没有淡入效果 | 首次绘制、重绘同一张、窗口隐藏、或系统开了「减少动态效果」（`prefers-reduced-motion: reduce`）时都是直接切换，不做 0.7s 过渡 |
 | 新素材不出现 | 刷新面板（宿主目录扫描有 4 秒快照缓存，见 `lib/index.js:229`）；确认扩展名在白名单（图片 jpg/jpeg/png/webp/gif/avif/bmp，视频 mp4/webm/mov/m4v） |
 | 改了 profile 文件不生效 | DSH 运行中会用内存配置回写 profile 文件；完全退出后再改，或改用「设置」界面 |
 | 面板打不开 / 报错 | 看 `/wallpaper/_client` 的 `lastError`，以及宿主日志 |
