@@ -39,6 +39,7 @@
 | 自动轮换 / 间隔 | 秒数可调；可勾「随机轮换」（不会连续两次同一张） |
 | 视频省电暂停 | 窗口不可见时暂停播放，回到前台自动续播（隐藏期间不切新壁纸） |
 | 轮换过渡 | 交叉淡入淡出 0.7s；系统开启「减少动态效果」或窗口隐藏时直接切换 |
+| 首帧就绪再淡入 | 新壁纸等首帧解码完成（视频 `loadeddata`、图片 `load`/`decode`，最多等 600ms）才开始淡入，避免大视频「先透明后硬切」 |
 | 浅色壁纸用深色字 | 关掉就固定用浅色字 |
 | 同步播放列表 | 一键把 Dynamic Wallpaper.app 播放列表里的素材同步进来 |
 | 删除（缩略图悬停） | 移到「废纸篓」（可恢复）+ 删缩略图缓存 + 从轮换移除 + 记入同步跳过名单 |
@@ -166,7 +167,7 @@ dsh-client-ui-wallpaper/
 
   ```bash
   node scripts/check.mjs
-  node --test                                          # 行为测试（mock ctx：路由 / 回收站 / 缩略图 GC / 随机轮换 / crossfade）
+  node --test                                          # 行为测试（mock ctx：路由 / 回收站 / 缩略图 GC / 随机轮换 / crossfade / 首帧就绪），1.1.1 起共 19 例
   curl -s http://127.0.0.1:19387/wallpaper/_client | python3 -m json.tool | head -40   # 客户端自报状态
   curl -s http://127.0.0.1:19387/wallpaper/_hits                                        # 各路由请求计数
   ```
@@ -204,7 +205,7 @@ gh release create v1.1.1 dsh-client-ui-wallpaper-1.1.1.zip
 | 侧栏/右栏透明度拖了没反应 | 常见于「透明化扫描」清掉了底色；本版本已对右栏跳过扫描并直接写 `background-color`。若自行改过选择器，核对 `SIDEBAR_CSS` / `SIDEBAR_LEFT_CSS` |
 | 代码块字看不清 | 代码块应「只跟外观走」；检查 `CODEFIX_CSS` 是否注入 |
 | 视频缩略图一直是灰的 | 首次访问 `/wallpaper/thumb/<name>` 会调 `qlmanage` 抽帧，稍等再刷新；检查 `~/.dsh/wallpaper-thumbs/` |
-| 换壁纸没有淡入效果 | 首次绘制、重绘同一张、窗口隐藏、或系统开了「减少动态效果」（`prefers-reduced-motion: reduce`）时都是直接切换，不做 0.7s 过渡 |
+| 换壁纸没有淡入效果 | 首次绘制、重绘同一张、窗口隐藏、或系统开了「减少动态效果」（`prefers-reduced-motion: reduce`）时都是直接切换，不做 0.7s 过渡。1.1.1 起淡入会先等新壁纸首帧就绪（最多 600ms），大视频不会再看成「秒切」；用 `/wallpaper/_probe` 的 `switches`（`lastReason` / `waited`）可确认最近一次为什么没淡 |
 | 新素材不出现 | 刷新面板（宿主目录扫描有 4 秒快照缓存，见 `lib/index.js:229`）；确认扩展名在白名单（图片 jpg/jpeg/png/webp/gif/avif/bmp，视频 mp4/webm/mov/m4v） |
 | 改了 profile 文件不生效 | DSH 运行中会用内存配置回写 profile 文件；完全退出后再改，或改用「设置」界面 |
 | 面板打不开 / 报错 | 看 `/wallpaper/_client` 的 `lastError`，以及宿主日志 |

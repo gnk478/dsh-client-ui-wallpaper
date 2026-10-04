@@ -106,6 +106,19 @@ console.log('8) 1.1.0 轮换交叉淡入淡出（crossfade）');
   check('探针上报 crossfade 标记', client.includes('crossfade: FADE_MS'));
   check('crossfade 行为测试 test/crossfade.test.mjs', existsSync(path.join(ROOT, 'test', 'crossfade.test.mjs')));
 
+console.log('9) 1.1.1 首帧就绪再淡入（修「偶尔没有淡入淡出」）');
+  check('首帧等待上限 READY_MS', client.includes('var READY_MS = 600'));
+  check('首帧判定 frameReady()', client.includes('function frameReady(node)'));
+  check('等首帧 whenFrame()', client.includes('function whenFrame(node)'));
+  check('淡入实现 fadeIn()', client.includes('function fadeIn(node, previous)'));
+  check('层内清理 settle()', client.includes('function settle()'));
+  check('切换原因 noteSwitch()', client.includes('function noteSwitch(reason, previous, node)'));
+  check('探针上报 switches', client.includes('switches: switchStats'));
+  check('探针上报 ready', client.includes('ready: READY_MS'));
+  check('视频预读 preload = "auto"', client.includes('video.preload = "auto"'));
+  check('预热节点不抢播 dshWpPrewarm', client.includes('dshWpPrewarm'));
+  check('轮换提前预热 armPrewarm()', client.includes('function armPrewarm()'));
+  check('打断守卫 paintSeq', client.includes('seq !== paintSeq'));
 console.log('');
 if (failed === 0) {
   console.log('全部通过 ✓');

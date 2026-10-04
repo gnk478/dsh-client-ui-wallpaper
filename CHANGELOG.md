@@ -1,5 +1,13 @@
 # 更新日志
 
+## 1.1.1 — 2026-10-05
+
+- **修：偶尔看不到淡入**：淡入前先等新壁纸首帧就绪（视频 `loadeddata`、图片 `load`/`decode`，`READY_MS = 600` 兜底超时照常淡入）——之前大体积视频解码慢，0.7s 过渡淡的是一个空节点，首帧上来时已经是硬切
+- **修：打断过渡时旧节点卡在层里**：`settle()` 统一回收除面纱与当前节点以外的媒体节点，`paintSeq` 守卫被打断的等待回调
+- **轮换预热**：切换前 8 秒预建下一项（`preload = "auto"`），预热节点不抢播
+- **可观测**：`/_probe` 增加 `ready` 与 `switches`（fade / waited / instantFirst / instantSame / instantHidden / instantReduced + lastReason/lastAt/lastFrom/lastTo），「有时候没淡」可直接量化
+- **测试**：`test/crossfade.test.mjs` 扩到 11 例（首帧未就绪先等待、600ms 兜底、打断后旧节点被回收），`node --test` 共 19 例；`scripts/check.mjs` 加第 9 节 13 项
+
 ## 1.1.0 — 2026-10-05
 
 - **轮换交叉淡入淡出**：换壁纸不再整层清空重建，改为新节点插在常驻面纱之前、旧节点留在下层淡出 0.7s 后再回收；`data-dsh-wp-current` 标记当前节点，自动字色与探针都改按当前节点取色，避免旧图层导致字色闪错

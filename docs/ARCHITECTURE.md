@@ -45,6 +45,7 @@ CSS + WINDOW_CSS + BLUR_CSS + SIDEBAR_LEFT_CSS + SIDEBAR_CSS + PANEL_CSS
 - **缓存**：面板数据 `panelDataCache` / `panelCfgCache`；视频帧缓存放 `window.__dshWpVideoFrames` + sessionStorage（客户端热替换会重置模块级变量）
 - **轮换与省电**：轮换取下一项走 `nextIndex()`（state `shuffle` 为真时随机且不重复当前项）；`document.visibilitychange` → `setPlayback()` 暂停/续播所有 `<video>`，隐藏期间只记 `pendingPaint`、回前台再补画
 - **交叉淡入淡出（crossfade）**：换壁纸时新节点 `data-dsh-wp-current` 插到常驻 `.dsh-wallpaper-scrim` 之前（面纱必须始终是最后一个子元素），旧节点留在下层由 `paint()` 给新节点加 `opacity 0 → 1`（`FADE_MS = 700`、`ease-out`）过渡，`FADE_MS + 80` 后 `retire()` 暂停并移除旧节点；`currentMedia()` 统一按当前节点取色，避免旧图层让自动字色闪错；首次绘制、重绘同一节点、`document.hidden`、`prefers-reduced-motion: reduce` 都直接替换
+- **首帧就绪再淡入（1.1.1）**：淡入前先看 `frameReady()`（视频 `readyState >= 2`、图片 `complete && naturalWidth > 0`），未就绪则由 `whenFrame()` 监听 `loadeddata` / `load` / `error` 并以 `READY_MS = 600` 兜底再淡；`paint()` 用 `paintSeq` 序号守卫被打断的等待回调，`settle()` 回收除面纱与当前节点以外的全部媒体节点（修掉旧节点以 `opacity:1` 卡在层里的问题）；`switchStats` 经 `/_probe` 的 `switches` 暴露 fade / waited / instant* 与 `lastReason`；轮换模式在切换前 8 秒用 `preload = "auto"` 预建下一项预热（预热节点带 `dshWpPrewarm` 标记、不抢播）
 
 ## 文件与状态
 

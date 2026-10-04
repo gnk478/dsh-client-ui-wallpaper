@@ -4,8 +4,9 @@ import { readFileSync } from 'node:fs';
 
 /**
  * 交叉淡入淡出（crossfade）行为测试。
- * 这里直接从 lib/client.js 抽出 prefersReducedMotion() / retire() / paint() 三个函数
- * 的真实源码，在最小 DOM 替身上执行——测的是线上那份代码，不是副本。
+ * 直接抽出 lib/client.js 里的真实源码（模块级 frameReady/whenFrame/mediaLabel +
+ * apply() 内的 prefersReducedMotion/retire/startVideo/settle/noteSwitch/fadeIn/paint），
+ * 在最小 DOM 替身上执行——测的是线上那份代码，不是副本。
  */
 const SOURCE = readFileSync(new URL('../lib/client.js', import.meta.url), 'utf8');
 const START = '/** True when the user asked the system to reduce motion';
@@ -15,28 +16,62 @@ const endAt = SOURCE.indexOf(END, startAt);
 if (startAt < 0 || endAt < 0) throw new Error('找不到 crossfade 代码块（paint/retire/prefersReducedMotion）');
 const BLOCK = SOURCE.slice(startAt, endAt);
 
+const HELPERS_START = '/** Longest we wait for a media node';
+const HELPERS_END = '/** The media node currently on screen';
+const helpersAt = SOURCE.indexOf(HELPERS_START);
+const helpersEnd = SOURCE.indexOf(HELPERS_END, helpersAt);
+if (helpersAt < 0 || helpersEnd < 0) throw new Error('找不到首帧就绪辅助函数（READY_MS/frameReady/whenFrame/mediaLabel）');
+const HELPERS = SOURCE.slice(helpersAt, helpersEnd);
+
 const FACTORY = new Function(
   'layer', 'scrim', 'document', 'window', 'setPlayback', 'scheduleInk', 'setTimeout', 'clearTimeout',
   [
     'var FADE_MS = 700;',
     'var current = null;',
     'var fadeTimer;',
+    'var paintSeq = 0;',
+    'var prewarmTimer;',
+    'var disposed = false;',
+    HELPERS,
     BLOCK,
-    'return { paint: paint, retire: retire, prefersReducedMotion: prefersReducedMotion, current: function () { return current; }, fadeTimer: function () { return fadeTimer; } };',
+    'return { paint: paint, retire: retire, prefersReducedMotion: prefersReducedMotion, current: function () { return current; }, fadeTimer: function () { return fadeTimer; }, switchStats: function () { return switchStats; } };',
   ].join('\n'),
 );
 
-function makeNode(tag) {
+const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+function makeNode(tag, options = {}) {
+  const name = String(tag).toUpperCase();
+  const ready = options.ready !== false;
   const node = {
-    tagName: String(tag).toUpperCase(),
+    tagName: name,
     parentNode: null,
     paused: false,
     offsetWidth: 120,
+    src: '',
+    currentSrc: '',
+    readyState: name === 'VIDEO' ? (ready ? 4 : 0) : 0,
+    complete: name === 'IMG' ? ready : false,
+    naturalWidth: name === 'IMG' && ready ? 8 : 0,
     attributes: {},
+    listeners: {},
+    dataset: {},
     style: {},
     setAttribute(name, value) { this.attributes[name] = value; },
     getAttribute(name) { return Object.prototype.hasOwnProperty.call(this.attributes, name) ? this.attributes[name] : null; },
     removeAttribute(name) { delete this.attributes[name]; },
+    addEventListener(name, fn) { (this.listeners[name] = this.listeners[name] || []).push(fn); },
+    removeEventListener(name, fn) {
+      const list = this.listeners[name];
+      if (!list) return;
+      const at = list.indexOf(fn);
+      if (at >= 0) list.splice(at, 1);
+    },
+    dispatch(name) {
+      const list = (this.listeners[name] || []).slice();
+      for (const fn of list) fn();
+    },
+    play() { this.paused = false; return undefined; },
     pause() { this.paused = true; },
     remove() { if (this.parentNode !== null) this.parentNode.detach(this); },
   };
@@ -94,6 +129,7 @@ test('首次绘制：只挂一个媒体节点 + scrim，且不做过渡', () => 
   assert.equal(first.style.transition, undefined);
   assert.equal(h.api.fadeTimer(), undefined);
   assert.deepEqual(h.ink, [first], '墨水采样应针对新节点');
+  assert.equal(h.api.switchStats().lastReason, 'instantFirst');
 });
 
 test('轮换：旧节点留在下层过渡，新节点淡入，旧视频立刻暂停', () => {
@@ -158,6 +194,7 @@ test('系统开启「减少动态效果」时直接替换', () => {
   h.api.paint(b);
   assert.deepEqual(h.layer.children, [b, h.scrim]);
   assert.equal(b.style.transition, undefined);
+  assert.equal(h.api.switchStats().lastReason, 'instantReduced');
 });
 
 test('层里出现陌生节点时被回收', () => {
@@ -175,4 +212,52 @@ test('同一节点重复绘制不会自我销毁', () => {
   h.api.paint(a);
   h.api.paint(a);
   assert.deepEqual(h.layer.children, [a, h.scrim]);
+});
+
+test('新节点还没首帧时先等待，首帧就绪后才淡入', async () => {
+  const h = harness();
+  const first = makeNode('img');
+  h.api.paint(first);
+  const second = makeNode('img', { ready: false });
+  h.api.paint(second);
+  assert.deepEqual(h.layer.children, [first, second, h.scrim], '等待期间新节点已挂上但不透明');
+  assert.equal(second.style.opacity, '0');
+  assert.equal(h.api.fadeTimer(), undefined, '首帧没来就不应该开始过渡');
+  assert.equal(h.api.switchStats().waited, 1);
+  second.dispatch('loadeddata');
+  await flush();
+  assert.equal(h.api.fadeTimer().ms, 780, '首帧到达后才开始 700ms 过渡');
+  assert.equal(second.style.opacity, '1');
+  assert.equal(h.api.switchStats().lastReason, 'fade');
+  assert.equal(h.api.switchStats().fade, 1);
+  h.runTimers();
+  assert.deepEqual(h.layer.children, [second, h.scrim]);
+});
+
+test('首帧迟迟不来时按 READY_MS 兜底淡入', async () => {
+  const h = harness();
+  const first = makeNode('img');
+  h.api.paint(first);
+  const second = makeNode('img', { ready: false });
+  h.api.paint(second);
+  assert.equal(h.timers.length, 1, '应挂一个 600ms 兜底定时器');
+  assert.equal(h.timers[0].ms, 600);
+  h.runTimers();
+  await flush();
+  assert.equal(h.api.fadeTimer().ms, 780);
+  assert.equal(second.style.opacity, '1');
+});
+
+test('打断上一次淡入：被取消的旧节点不会卡在层里', () => {
+  const h = harness();
+  const a = makeNode('img');
+  h.api.paint(a);
+  const b = makeNode('img');
+  h.api.paint(b);
+  const c = makeNode('img');
+  h.api.paint(c);
+  assert.equal(h.timers[0].cancelled, true);
+  h.runTimers();
+  assert.deepEqual(h.layer.children, [c, h.scrim], '层里只能剩当前节点');
+  assert.equal(h.api.switchStats().fade, 2);
 });
