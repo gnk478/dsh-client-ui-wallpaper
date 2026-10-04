@@ -30,7 +30,7 @@
 
 **工程**
 
-- `docs/preview.png` 界面示意图（脚本绘制）；npm `publishConfig` / `prepublishOnly` 自检
+- `docs/preview.png` 界面截图（真实运行截图，1800×1169）；npm `publishConfig` / `prepublishOnly` 自检
 - 状态落盘 `~/.dsh/wallpaper-state.json`；缩略图缓存 `~/.dsh/wallpaper-thumbs/`
 - 自检路由：`/wallpaper/_client`、`/wallpaper/_hits`、`/wallpaper/_probe`
 - `scripts/check.mjs` 静态自检、`scripts/install.mjs` 安装进 profile、`cordis.patch.yml` 挂载声明
