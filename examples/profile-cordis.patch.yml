@@ -1,0 +1,22 @@
+# 直接手动接进 profile 时的写法（~/.dsh/profiles/<profile>/cordis.patch.yml）
+# 注意：DSH 运行中会用内存配置回写该文件，手工改完最好完全退出再启动一次。
+
+- insert:
+    - id: ui-wallpaper
+      name: ./plugins/dsh-client-ui-wallpaper/lib/index.js
+      config:
+        imageDir: ~/.dsh/wallpapers        # 静态壁纸目录
+        videoDir: ~/.dsh/videos            # 动态壁纸目录（也可指向 Dynamic Wallpaper.app 的素材目录）
+        image: ''                          # 固定壁纸文件名（留空表示用目录里的第一个/轮换）
+        video: ''                          # 固定视频文件名
+        mode: image                        # image | video | rotate
+        live: false                        # 图片存在同名视频时，用视频做动态壁纸
+        rotateSeconds: 300                 # 轮换间隔（秒）
+        blur: 8                            # 背景模糊（px）
+        panelOpacity: 0                    # 面板透明度（0 = 全透，看得到壁纸）
+        windowOpacity: 0.96                # 弹窗不透明度（1 = 完全不透明）
+        dim: 0                             # 纱层（0 = 不加）
+        autoInk: true                      # 浅色壁纸用深色字
+        autoInclude: true                  # 新丢进目录的素材自动加入轮换
+        only: []                           # 深色壁纸白名单（只轮换深色/深色池）
+        darkVideos: []                     # 深色动态视频名单

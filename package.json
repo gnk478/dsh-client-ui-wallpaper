@@ -1,0 +1,63 @@
+{
+  "name": "dsh-client-ui-wallpaper",
+  "version": "1.0.0",
+  "description": "把本地图片/视频（Dynamic Wallpaper.app 素材）用作 DSH 桌面客户端壁纸：铺满窗口、背景模糊、面板/左右侧栏独立透明度、自动深浅字、视频缩略图、轮换与播放列表同步。· Use local images or videos as the DSH desktop client background.",
+  "type": "module",
+  "main": "lib/index.js",
+  "license": "MIT",
+  "author": "gnk478 <cc808131@126.com>",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "wallpaper",
+    "background",
+    "dynamic-wallpaper",
+    "theme"
+  ],
+  "homepage": "https://github.com/gnk478/dsh-client-ui-wallpaper#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gnk478/dsh-client-ui-wallpaper.git"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "lib",
+    "docs",
+    "examples",
+    "scripts",
+    "cordis.patch.yml",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "PROVENANCE.md"
+  ],
+  "exports": {
+    ".": {
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "default": "./lib/client.js"
+    },
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "check": "node scripts/check.mjs",
+    "install": "node scripts/install.mjs",
+    "install:desktop": "node scripts/install.mjs --profile desktop"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web"
+    }
+  },
+  "bugs": {
+    "url": "https://github.com/gnk478/dsh-client-ui-wallpaper/issues"
+  }
+}
