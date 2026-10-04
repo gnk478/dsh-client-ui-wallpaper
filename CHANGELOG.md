@@ -1,5 +1,9 @@
 # 更新日志
 
+## 1.0.4 — 2026-10-05
+
+- **npm 包里也能跑自检**：1.0.3 的自检第 7 节会校验 workflow YAML，但 npm 包里没有 `.github/`，从装好的包里跑 `node scripts/check.mjs` 会报 3 项失败。现在缺 `.github/` 时跳过（只查随包发布的 `examples/` 两份副本），并把 `test/` 加进 `files`——装完包也能 `npm test` 跑行为测试
+
 ## 1.0.3 — 2026-10-05
 
 - **修 CI**：1.0.2 给 `check.yml` 加的行为测试步骤，名字里带了未加引号的 `": "`（`behavior tests (mock ctx: routes …)`），YAML 解析失败 → Actions `startup_failure`（有运行记录但没有任何 job）。步骤名已改，main 与 tag 上的 check 都恢复绿色

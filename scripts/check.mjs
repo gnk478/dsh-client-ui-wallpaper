@@ -79,6 +79,11 @@ console.log('7) workflow YAML 行内校验（未加引号的 ": " 会让 Actions
 for (const file of ['.github/workflows/check.yml', '.github/workflows/publish.yml', 'examples/github-workflow-check.yml', 'examples/github-workflow-publish.yml']) {
   const full = path.join(ROOT, file);
   if (!existsSync(full)) {
+    // npm 包里不带 .github/，只带 examples/ 的两份副本——缺 .github 时跳过，不算失败
+    if (file.startsWith('.github/')) {
+      console.log('  skip ' + file + '（不在 npm 包里）');
+      continue;
+    }
     check(file, false, 'missing');
     continue;
   }
