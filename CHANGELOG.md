@@ -1,5 +1,10 @@
 # 更新日志
 
+## 1.0.3 — 2026-10-05
+
+- **修 CI**：1.0.2 给 `check.yml` 加的行为测试步骤，名字里带了未加引号的 `": "`（`behavior tests (mock ctx: routes …)`），YAML 解析失败 → Actions `startup_failure`（有运行记录但没有任何 job）。步骤名已改，main 与 tag 上的 check 都恢复绿色
+- **自检加防**：`scripts/check.mjs` 新增第 7 节，校验仓库里 4 个 workflow YAML 不含未加引号的 `": "`，本地跑一次就能拦住这类问题
+
 ## 1.0.2 — 2026-10-05
 
 - **删除改为移入「废纸篓」**：`POST /wallpaper/delete` 优先 `rename` 到 `~/.Trash`（重名自动加时间戳后缀），跨卷 / 权限失败回退为真删；响应新增 `trashed` / `trashPath`，面板提示「已移到废纸篓」或「已永久删除」
