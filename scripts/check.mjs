@@ -75,7 +75,22 @@ check('隐藏时挂起重绘 pendingPaint', client.includes('pendingPaint'));
 check('面板随机轮换开关', client.includes('随机轮换'));
 check('行为测试 test/host.test.mjs', existsSync(path.join(ROOT, 'test', 'host.test.mjs')));
 
-console.log('');if (failed === 0) {
+console.log('7) workflow YAML 行内校验（未加引号的 ": " 会让 Actions 直接 startup_failure）');
+for (const file of ['.github/workflows/check.yml', '.github/workflows/publish.yml', 'examples/github-workflow-check.yml', 'examples/github-workflow-publish.yml']) {
+  const full = path.join(ROOT, file);
+  if (!existsSync(full)) {
+    check(file, false, 'missing');
+    continue;
+  }
+  const bad = readFileSync(full, 'utf8').split('\n')
+    .map((line, i) => ({ line, n: i + 1 }))
+    .filter(({ line }) => /^\s*(-\s+)?[A-Za-z_][\w.-]*:\s+\S/.test(line))
+    .filter(({ line }) => /:\s/.test(line.replace(/^\s*(-\s+)?[A-Za-z_][\w.-]*:\s*/, '').replace(/'[^']*'|"[^"]*"/g, '')));
+  check(file + ' 无未加引号的 ": "', bad.length === 0, bad.map((b) => 'line ' + b.n).join(','));
+}
+
+console.log('');
+if (failed === 0) {
   console.log('全部通过 ✓');
 } else {
   console.log(failed + ' 项未通过 ✗');
