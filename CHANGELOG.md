@@ -30,7 +30,7 @@
 
 **工程**
 
-- `docs/screenshot.png` 界面截图（真实运行截图 1250×1287，已裁去工作区列表并抹掉背景会话残影）；npm `publishConfig` / `prepublishOnly` 自检
+- `docs/screenshot.png` 界面截图（真实运行截图 1800×1169，未裁切，仅左侧工作区名称做模糊处理）；npm `publishConfig` / `prepublishOnly` 自检
 - 状态落盘 `~/.dsh/wallpaper-state.json`；缩略图缓存 `~/.dsh/wallpaper-thumbs/`
 - 自检路由：`/wallpaper/_client`、`/wallpaper/_hits`、`/wallpaper/_probe`
 - `scripts/check.mjs` 静态自检、`scripts/install.mjs` 安装进 profile、`cordis.patch.yml` 挂载声明
