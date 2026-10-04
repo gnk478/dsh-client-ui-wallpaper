@@ -5,8 +5,8 @@
     - id: ui-wallpaper
       name: ./plugins/dsh-client-ui-wallpaper/lib/index.js
       config:
-        imageDir: ~/.dsh/wallpapers        # 静态壁纸目录
-        videoDir: ~/.dsh/videos            # 动态壁纸目录（也可指向 Dynamic Wallpaper.app 的素材目录）
+        imageDir: /Users/you/.dsh/wallpapers   # 静态壁纸目录（必须绝对路径；插件不做 ~ 展开）
+        videoDir: /Users/you/.dsh/videos       # 动态壁纸目录（同上；也可指向 Dynamic Wallpaper.app 素材目录）
         image: ''                          # 固定壁纸文件名（留空表示用目录里的第一个/轮换）
         video: ''                          # 固定视频文件名
         mode: image                        # image | video | rotate

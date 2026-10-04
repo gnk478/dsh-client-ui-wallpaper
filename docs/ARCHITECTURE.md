@@ -48,8 +48,8 @@ CSS + WINDOW_CSS + BLUR_CSS + SIDEBAR_LEFT_CSS + SIDEBAR_CSS + PANEL_CSS
 
 | 路径 | 说明 |
 |---|---|
-| `~/.dsh/wallpapers` | 静态壁纸目录（config.imageDir） |
-| `~/.dsh/videos` | 动态壁纸目录（config.videoDir） |
+| Dynamic Wallpaper.app 素材库的 `Wallpaper/` | 静态壁纸目录（config.imageDir 默认值，见 `lib/index.js:37-39`） |
+| Dynamic Wallpaper.app 素材库的 `Videos/` | 动态壁纸目录（config.videoDir 默认值）；config 里写**绝对路径**才会生效，插件不做 `~` 展开 |
 | `~/.dsh/wallpaper-state.json` | 运行时状态 |
 | `~/.dsh/wallpaper-thumbs/` | 视频缩略图缓存 |
 | `~/.dsh/wallpaper-sync-skip.txt` | 同步跳过名单（删过的素材写这里，避免被同步拉回） |

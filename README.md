@@ -1,11 +1,12 @@
 # dsh-client-ui-wallpaper
 
 [![check](https://github.com/gnk478/dsh-client-ui-wallpaper/actions/workflows/check.yml/badge.svg)](https://github.com/gnk478/dsh-client-ui-wallpaper/actions/workflows/check.yml)
+[![npm](https://img.shields.io/npm/v/dsh-client-ui-wallpaper.svg)](https://www.npmjs.com/package/dsh-client-ui-wallpaper)
 
 把本地图片 / 视频（例如 [Dynamic Wallpaper.app](https://apps.apple.com/app/id1505218567) 播放列表里的素材）
 用作 **DSH 桌面客户端**的背景：整窗铺满、背景模糊、面板与左右侧栏透明度分别可控，字色跟着壁纸明暗自动切换。
 
-> 这是 `~/.dsh/profiles/desktop/plugins/dsh-client-ui-wallpaper` 的完整项目版：含挂载声明、安装脚本、自检脚本与文档。
+> 这是 `~/.dsh/profiles/desktop/plugins/dsh-client-ui-wallpaper` 的完整项目版：含挂载声明、安装脚本、自检脚本与文档；已发布到 npm（[dsh-client-ui-wallpaper](https://www.npmjs.com/package/dsh-client-ui-wallpaper)）。
 
 ![设置 · 壁纸](docs/screenshot.png)
 
@@ -41,29 +42,47 @@
 | 删除（缩略图悬停） | 删文件 + 删缩略图缓存 + 从轮换移除 + 记入同步跳过名单 |
 | 侧栏小圆钉 | 与头像中心对齐的收起按钮，点空白处自动收回 |
 
-## 快速开始
+## 安装
+
+三种方式任选一种；装完刷新页面（或重启 DSH），打开 **设置 → 壁纸**：
+
+**A. 从 npm 装**（[dsh-client-ui-wallpaper](https://www.npmjs.com/package/dsh-client-ui-wallpaper)）
 
 ```bash
-git clone <本仓库> dsh-client-ui-wallpaper && cd dsh-client-ui-wallpaper
+npm i dsh-client-ui-wallpaper
+# 装进某个 profile（默认 desktop）；会先备份该 profile 的 cordis.patch.yml
+node node_modules/dsh-client-ui-wallpaper/scripts/install.mjs --profile desktop
+```
 
-# 1) 装进某个 profile（默认 desktop）；会先备份 profile 的 cordis.patch.yml
+**B. 从源码装**
+
+```bash
+git clone https://github.com/gnk478/dsh-client-ui-wallpaper.git
+cd dsh-client-ui-wallpaper
 node scripts/install.mjs --profile desktop
+```
 
-# 2) 准备素材
+**C. 用 DSH 插件管理器**（把 clone / 解压好的目录挂进去）
+
+```bash
+dsh plugin --profile desktop add link:/绝对路径/dsh-client-ui-wallpaper
+```
+
+## 快速开始
+
+素材二选一：
+
+- **什么都不用做**：默认直接读 [Dynamic Wallpaper.app](https://apps.apple.com/app/id1505218567) 的素材库
+  `~/Library/Containers/whbalzac.Dongtaizhuomian/Data/Documents/{Wallpaper,Videos}`
+- **用自己的目录**：在 config 里写**绝对路径**（插件不做 `~` 展开），例如
+  `imageDir: /Users/you/.dsh/wallpapers`、`videoDir: /Users/you/.dsh/videos`
+
+```bash
 mkdir -p ~/.dsh/wallpapers ~/.dsh/videos
 cp ~/Pictures/some.jpg ~/.dsh/wallpapers/          # 静态壁纸
 cp ~/Movies/some.mp4  ~/.dsh/videos/               # 动态壁纸
 
-# 3) 自检 & 重启
-node scripts/check.mjs
-```
-
-然后刷新页面（或重启 DSH），打开 **设置 → 壁纸** 即可。
-
-也可以走 DSH 自己的插件安装：
-
-```bash
-dsh plugin --profile desktop add link:/绝对路径/dsh-client-ui-wallpaper
+node scripts/check.mjs                             # 自检
 ```
 
 ## 配置
@@ -72,7 +91,7 @@ dsh plugin --profile desktop add link:/绝对路径/dsh-client-ui-wallpaper
 
 | 键 | 默认 | 说明 |
 |---|---|---|
-| `imageDir` / `videoDir` | `~/.dsh/wallpapers` / `~/.dsh/videos` | 素材目录 |
+| `imageDir` / `videoDir` | Dynamic Wallpaper.app 素材库的 `Wallpaper/` 与 `Videos/`（`lib/index.js:37-39`） | 素材目录，**必须是绝对路径**（插件不做 `~` 展开） |
 | `mode` | `image` | `image` / `video` / `rotate` |
 | `image` / `video` | `''` | 固定的文件名 |
 | `live` | `false` | 图片有同名视频时用视频做动态壁纸 |
@@ -129,7 +148,9 @@ dsh-client-ui-wallpaper/
 │   ├── install.mjs              安装进 profile（备份 + 复制 + 写 insert 行）
 │   └── check.mjs                静态自检（语法 + 路由 + 样式常量 + 控件）
 ├── docs/ARCHITECTURE.md         架构、路由表、样式常量、踩坑记录
+├── .github/workflows/           check.yml（自检）+ publish.yml（npm 可信发布）
 ├── examples/profile-cordis.patch.yml  带完整配置的挂载示例
+├── examples/github-workflow-publish.yml  publish.yml 副本（方便复制）
 ├── cordis.patch.yml             本插件的挂载声明
 ├── CHANGELOG.md / PROVENANCE.md / LICENSE
 └── README.md
@@ -148,21 +169,28 @@ dsh-client-ui-wallpaper/
 
 ## 发布与打包
 
-```bash
-# npm 发布（可选；包名 dsh-client-ui-wallpaper，publishConfig.access = public）
-npm login
-npm publish                        # prepublishOnly 会先跑 scripts/check.mjs
+**npm 发布走可信发布（Trusted Publishing / OIDC），不需要 token**：
 
-# 打 zip 附到 Release
-git archive --format=zip -o dsh-client-ui-wallpaper-1.0.0.zip HEAD
-gh release upload v1.0.0 dsh-client-ui-wallpaper-1.0.0.zip
+1. 改 `package.json` 的 `version`、更新 `CHANGELOG.md`
+2. 在 npm 包设置里配 Trusted Publisher：GitHub Actions → Organization `gnk478`、Repository `dsh-client-ui-wallpaper`、Workflow `publish.yml`，Allowed actions 勾上 `npm publish`
+3. 推 tag 或手动触发 [`.github/workflows/publish.yml`](.github/workflows/publish.yml)：
+
+```bash
+git tag v1.0.1 && git push origin v1.0.1   # tag 触发
+gh workflow run publish.yml                 # 或手动触发
 ```
 
-**启用 GitHub Actions（CI）**：配置文件在 [`examples/github-workflow-check.yml`](examples/github-workflow-check.yml) ——
-OAuth App 令牌缺 `workflow` 权限，`.github/workflows/` 推不上去，二选一：
+工作流里 `permissions: id-token: write` 是关键（OIDC 身份）；`npm publish` 会自动带 provenance。
+本地手工发布仍然可用，但需要一个开了 **Bypass 2FA** 的 Granular Access Token：`npm login && npm publish`（`prepublishOnly` 会先跑 `scripts/check.mjs`）。
 
-1. 在 GitHub 网页上新建 `.github/workflows/check.yml`，内容复制该文件
-2. `gh auth refresh -s workflow` 授权后，把该文件放回 `.github/workflows/` 再推送
+**Release 附件**：
+
+```bash
+git archive --format=zip -o dsh-client-ui-wallpaper-1.0.1.zip HEAD
+gh release create v1.0.1 dsh-client-ui-wallpaper-1.0.1.zip
+```
+
+**CI**：[`.github/workflows/check.yml`](.github/workflows/check.yml) 在 push / PR 时跑 `node scripts/check.mjs`，也是顶部徽章的来源；两个工作流的副本放在 `examples/` 下方便复制。
 
 ## 故障排查
 

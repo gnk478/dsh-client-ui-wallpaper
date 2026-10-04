@@ -1,5 +1,13 @@
 # 更新日志
 
+## 1.0.1 — 2026-10-05
+
+- **发布到 npm**：[`dsh-client-ui-wallpaper`](https://www.npmjs.com/package/dsh-client-ui-wallpaper)（`publishConfig.access = public`；首个版本经 staged publishing 审批后上线）
+- README 新增「安装」章节（npm / 源码 / DSH 插件管理器三种方式）与 npm 徽章
+- 新增 [`.github/workflows/publish.yml`](.github/workflows/publish.yml)：用 **Trusted Publishing（OIDC）** 发布，不再需要长期 token（`permissions: id-token: write`，tag `v*` 或手动触发）
+- 修正文档里 `imageDir` / `videoDir` 的默认值：实际默认是 Dynamic Wallpaper.app 素材库的 `Wallpaper/`、`Videos/`（`lib/index.js:37-39`），不是 `~/.dsh/wallpapers`；并注明 config 必须写绝对路径（插件不做 `~` 展开）
+- 生命周期脚本 `install` 改名为 `install:plugin`，避免别人 `npm install` 这个包时被自动写进 `~/.dsh/profiles`
+
 ## 1.0.0 — 2026-10-04
 
 首个打包版本。把此前在 `~/.dsh/profiles/desktop/plugins/dsh-client-ui-wallpaper` 里边用边改的代码，整理成一个自洽的项目（含挂载声明、安装脚本、自检、文档）。
