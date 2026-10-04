@@ -5,6 +5,10 @@
 
 > 这是 `~/.dsh/profiles/desktop/plugins/dsh-client-ui-wallpaper` 的完整项目版：含挂载声明、安装脚本、自检脚本与文档。
 
+![界面示意](docs/preview.png)
+
+> 上图为**示意**（脚本绘制，非真实截图）：壁纸铺满整窗、设置面板半透明、右侧栏 35%、左栏保持透明、代码块按深色外观取深底浅字。
+
 ## 功能
 
 **背景**
@@ -139,6 +143,24 @@ dsh-client-ui-wallpaper/
   curl -s http://127.0.0.1:19387/wallpaper/_client | python3 -m json.tool | head -40   # 客户端自报状态
   curl -s http://127.0.0.1:19387/wallpaper/_hits                                        # 各路由请求计数
   ```
+
+## 发布与打包
+
+```bash
+# npm 发布（可选；包名 dsh-client-ui-wallpaper，publishConfig.access = public）
+npm login
+npm publish                        # prepublishOnly 会先跑 scripts/check.mjs
+
+# 打 zip 附到 Release
+git archive --format=zip -o dsh-client-ui-wallpaper-1.0.0.zip HEAD
+gh release upload v1.0.0 dsh-client-ui-wallpaper-1.0.0.zip
+```
+
+**启用 GitHub Actions（CI）**：配置文件在 [`examples/github-workflow-check.yml`](examples/github-workflow-check.yml) ——
+OAuth App 令牌缺 `workflow` 权限，`.github/workflows/` 推不上去，二选一：
+
+1. 在 GitHub 网页上新建 `.github/workflows/check.yml`，内容复制该文件
+2. `gh auth refresh -s workflow` 授权后，把该文件放回 `.github/workflows/` 再推送
 
 ## 故障排查
 

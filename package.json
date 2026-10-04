@@ -47,7 +47,8 @@
   "scripts": {
     "check": "node scripts/check.mjs",
     "install": "node scripts/install.mjs",
-    "install:desktop": "node scripts/install.mjs --profile desktop"
+    "install:desktop": "node scripts/install.mjs --profile desktop",
+    "prepublishOnly": "node scripts/check.mjs"
   },
   "dsh": {
     "bundle": {
@@ -59,5 +60,8 @@
   },
   "bugs": {
     "url": "https://github.com/gnk478/dsh-client-ui-wallpaper/issues"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
