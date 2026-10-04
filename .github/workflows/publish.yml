@@ -21,5 +21,17 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
       - name: self check
         run: node scripts/check.mjs
+      - name: oidc exchange diagnostics (trusted publisher)
+        continue-on-error: true
+        run: |
+          set -x
+          node -v; npm -v
+          IDT=$(curl -sS -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=npm:registry.npmjs.org" \
+            | node -pe 'JSON.parse(require("fs").readFileSync(0,"utf8")).value')
+          curl -sS -o /tmp/exchange.json -w "exchange HTTP %{http_code}\n" \
+            -X POST "https://registry.npmjs.org/-/npm/v1/oidc/token/exchange/package/dsh-client-ui-wallpaper" \
+            -H "Authorization: Bearer ${IDT}"
+          node -e "const s=require('fs').readFileSync('/tmp/exchange.json','utf8');let j;try{j=JSON.parse(s)}catch(e){};if(j&&j.token){console.log('exchange OK: token received (hidden)')}else{console.log('exchange FAILED body: '+s.slice(0,600))}"
       - name: publish to npm (trusted publishing, no token)
         run: npm publish
