@@ -1,5 +1,13 @@
 # 更新日志
 
+## 1.0.2 — 2026-10-05
+
+- **删除改为移入「废纸篓」**：`POST /wallpaper/delete` 优先 `rename` 到 `~/.Trash`（重名自动加时间戳后缀），跨卷 / 权限失败回退为真删；响应新增 `trashed` / `trashPath`，面板提示「已移到废纸篓」或「已永久删除」
+- **视频省电暂停**：窗口不可见（`visibilitychange`）时暂停所有视频解码，回到前台自动续播；隐藏期间轮换不切新素材，回前台再补画（`pendingPaint`）
+- **随机轮换**：state / config 新增 `shuffle`，面板「间隔」旁可勾选；`nextIndex()` 保证不会连续两次同一张
+- **缩略图缓存 GC**：每次目录扫描顺带清理（10 分钟节流）孤儿缩略图，以及超过 1 小时的 `.scratch-*` 转码残留（保护正在转码的目录）；计数进 `/_hits` 的 `thumbGc`
+- **行为测试**：新增 `test/host.test.mjs`（mock `ctx` + 真实 HTTP 路由），覆盖路由表、状态校验、HEAD/Range、路径穿越、回收站删除与跨卷回退、缩略图 GC；`npm test` = `node --test`，CI 与 `prepublishOnly` 都会跑
+
 ## 1.0.1 — 2026-10-05
 
 - **发布到 npm**：[`dsh-client-ui-wallpaper`](https://www.npmjs.com/package/dsh-client-ui-wallpaper)（`publishConfig.access = public`；首个版本经 staged publishing 审批后上线）

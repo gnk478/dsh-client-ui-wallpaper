@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /** 静态自检：语法 + 关键结构（宿主路由、客户端样式常量与面板控件）是否齐全。 */
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
@@ -60,8 +60,22 @@ check('透明化扫描跳过 rightbarCol', client.includes('el.matches("[class*=
 check('样式命中 rightbarCol', client.includes('[class*=\\"_rightbarCol\\"]'));
 check('左栏保留透明', client.includes('SIDEBAR_LEFT_CSS'));
 
-console.log('');
-if (failed === 0) {
+console.log('6) 1.0.2 行为（回收站删除 / 缩略图 GC / 随机轮换 / 视频暂停）');
+check('回收站删除 trashFile()', host.includes('async function trashFile'));
+check('移入 ~/.Trash', host.includes("'.Trash'"));
+check('跨卷回退硬删除', host.includes('await rm(target, { force: true })'));
+check('缩略图 GC gcThumbs()', host.includes('const gcThumbs = async'));
+check('scratch 宽限 .scratch-', host.includes("startsWith('.scratch-')"));
+check('shuffle 校验', host.includes('shuffle must be a boolean'));
+check('shuffle 落盘', host.includes('patch.shuffle = body.shuffle'));
+check('随机轮换 nextIndex()', client.includes('function nextIndex'));
+check('视频暂停 setPlayback()', client.includes('function setPlayback'));
+check('visibilitychange 监听', client.includes('visibilitychange'));
+check('隐藏时挂起重绘 pendingPaint', client.includes('pendingPaint'));
+check('面板随机轮换开关', client.includes('随机轮换'));
+check('行为测试 test/host.test.mjs', existsSync(path.join(ROOT, 'test', 'host.test.mjs')));
+
+console.log('');if (failed === 0) {
   console.log('全部通过 ✓');
 } else {
   console.log(failed + ' 项未通过 ✗');

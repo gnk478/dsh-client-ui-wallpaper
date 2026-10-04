@@ -19,7 +19,7 @@
 | `GET /wallpaper/file/<name>` | 送壁纸文件（支持 Range） |
 | `GET /wallpaper/thumb/<name>` | 视频缩略图：`qlmanage -t -s 480` 抽帧后落盘缓存 |
 | `POST /wallpaper/sync` | 从 Dynamic Wallpaper.app 播放列表同步素材 |
-| `POST /wallpaper/delete` | 删除素材（文件 + 缩略图 + 轮换项 + 记入跳过名单） |
+| `POST /wallpaper/delete` | 删除素材：移入 `~/.Trash`（跨卷回退硬删，响应带 `trashed`/`trashPath`）+ 缩略图 + 轮换项 + 记入跳过名单 |
 | `GET /wallpaper/_client` | 客户端上报的自检快照（ink/探针/面板状态/lastError） |
 | `GET /wallpaper/_hits` | 各路由请求计数 |
 | `POST /wallpaper/_probe` | 外部注入探针数据 |
@@ -43,6 +43,7 @@ CSS + WINDOW_CSS + BLUR_CSS + SIDEBAR_LEFT_CSS + SIDEBAR_CSS + PANEL_CSS
 - **透明化扫描**：每 3 秒给面积 > 窗口 35% 且带实色背景的大面板打 `data-dsh-wp-clear` 强制透明；**跳过**弹窗/菜单，并跳过右栏（它要能调透明度）
 - **自动对比**：`applyAutoInk()` 只处理自带背景的气泡/工具栏等；打标键 = 外观 epoch + 元素背景色，避免旧色滞留
 - **缓存**：面板数据 `panelDataCache` / `panelCfgCache`；视频帧缓存放 `window.__dshWpVideoFrames` + sessionStorage（客户端热替换会重置模块级变量）
+- **轮换与省电**：轮换取下一项走 `nextIndex()`（state `shuffle` 为真时随机且不重复当前项）；`document.visibilitychange` → `setPlayback()` 暂停/续播所有 `<video>`，隐藏期间只记 `pendingPaint`、回前台再补画
 
 ## 文件与状态
 
@@ -51,7 +52,7 @@ CSS + WINDOW_CSS + BLUR_CSS + SIDEBAR_LEFT_CSS + SIDEBAR_CSS + PANEL_CSS
 | Dynamic Wallpaper.app 素材库的 `Wallpaper/` | 静态壁纸目录（config.imageDir 默认值，见 `lib/index.js:37-39`） |
 | Dynamic Wallpaper.app 素材库的 `Videos/` | 动态壁纸目录（config.videoDir 默认值）；config 里写**绝对路径**才会生效，插件不做 `~` 展开 |
 | `~/.dsh/wallpaper-state.json` | 运行时状态 |
-| `~/.dsh/wallpaper-thumbs/` | 视频缩略图缓存 |
+| `~/.dsh/wallpaper-thumbs/` | 视频缩略图缓存；每次目录扫描顺带 GC（10 分钟节流）：删孤儿缩略图与超过 1 小时的 `.scratch-*` 转码残留，计数进 `/_hits` 的 `thumbGc` |
 | `~/.dsh/wallpaper-sync-skip.txt` | 同步跳过名单（删过的素材写这里，避免被同步拉回） |
 
 ## 踩坑记录（改之前先看这里）

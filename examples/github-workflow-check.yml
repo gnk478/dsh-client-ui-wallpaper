@@ -15,3 +15,5 @@ jobs:
           node-version: '22'
       - name: self check (syntax + routes + style tokens + controls)
         run: node scripts/check.mjs
+      - name: behavior tests (mock ctx: routes / trash / gc / shuffle)
+        run: node --test

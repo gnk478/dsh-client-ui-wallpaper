@@ -1,6 +1,6 @@
 {
   "name": "dsh-client-ui-wallpaper",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "把本地图片/视频（Dynamic Wallpaper.app 素材）用作 DSH 桌面客户端壁纸：铺满窗口、背景模糊、面板/左右侧栏独立透明度、自动深浅字、视频缩略图、轮换与播放列表同步。· Use local images or videos as the DSH desktop client background.",
   "type": "module",
   "main": "lib/index.js",
@@ -48,7 +48,8 @@
     "check": "node scripts/check.mjs",
     "install:plugin": "node scripts/install.mjs",
     "install:desktop": "node scripts/install.mjs --profile desktop",
-    "prepublishOnly": "node scripts/check.mjs"
+    "test": "node --test",
+    "prepublishOnly": "node scripts/check.mjs && node --test"
   },
   "dsh": {
     "bundle": {
