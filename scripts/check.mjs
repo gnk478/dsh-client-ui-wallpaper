@@ -119,6 +119,7 @@ console.log('9) 1.1.1 首帧就绪再淡入（修「偶尔没有淡入淡出」�
   check('预热节点不抢播 dshWpPrewarm', client.includes('dshWpPrewarm'));
   check('轮换提前预热 armPrewarm()', client.includes('function armPrewarm()'));
   check('打断守卫 paintSeq', client.includes('seq !== paintSeq'));
+
 console.log('10) 1.1.2 探针实时化 / 图层自愈 / 预热阈值');
   check('图层审计 auditLayer()', client.includes('function auditLayer()'));
   check('过渡宽限 AUDIT_GRACE_MS', client.includes('var AUDIT_GRACE_MS = FADE_MS + 250'));
@@ -134,6 +135,19 @@ console.log('10) 1.1.2 探针实时化 / 图层自愈 / 预热阈值');
   check('丢弃未用预热节点 discardWarmed()', client.includes('function discardWarmed()'));
   check('预热计数 prewarmStats', client.includes('prewarmStats.skipped += 1') && client.includes('prewarmStats.dropped += 1'));
   check('审计行为测试', readFileSync(path.join(ROOT, 'test', 'crossfade.test.mjs'), 'utf8').includes('图层审计'));
+
+console.log('11) 1.1.3 轮换加载路径（1.1.1/1.1.2 丢声明导致 load() 一直静默失败）');
+  check('轮换间隔 seconds 有声明', client.includes('var seconds = Number(config.rotateSeconds)'));
+  check('间隔下限 clamp 到 600', client.includes('if (!isFinite(seconds) || seconds < 15) seconds = 600'));
+  check('轮换游标 index 有声明', client.includes('var index = 0;'));
+  check('首帧停在当前素材', client.includes('if (sequence[k].name === image || sequence[k].name === video) { index = k; break; }'));
+  check('rotate 分支结束即 return', client.includes('\n\t\t\t\t\t\treturn;\n\t\t\t\t\t}'));
+  check('加载失败留痕 loadFailure', client.includes('var loadFailure = null'));
+  check('探针上报 loadFailure', client.includes('loadFailure: loadFailure'));
+  check('reportClient 上报 loadFailure', client.includes('payload.loadFailure = loadFailure'));
+  check('成功加载清空 loadFailure', client.includes('appliedSignature = signature;\n\t\t\t\t\tloadFailure = null;'));
+  check('catch 记录错误不再静默', client.includes('message: error && error.message !== undefined'));
+  check('轮换加载路径测试 test/rotate.test.mjs', existsSync(path.join(ROOT, 'test', 'rotate.test.mjs')));
 console.log('');
 if (failed === 0) {
   console.log('全部通过 ✓');

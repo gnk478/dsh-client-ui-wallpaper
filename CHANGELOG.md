@@ -1,5 +1,11 @@
 # 更新日志
 
+## 1.1.3 — 2026-10-06
+
+- **修：1.1.1 / 1.1.2 轮换模式壁纸整块空白（严重）**：1.1.1 引入预热时，rotate 分支丢了 `var seconds = Number(config.rotateSeconds)`（含 15 秒下限、默认 600）与 `var index = 0` + 首帧定位循环，分支末尾也丢了 `return;`；`load()` 一进分支就读未声明的 `index` 抛 `ReferenceError`，又落进静默的 `.catch(function () {})` → 壁纸不再绘制且没有任何提示。现已恢复初始化与 `return;`
+- **修：加载失败不再静默**：加载链异常记进 `loadFailure = { at, name, message }`，`/wallpaper/_probe` 与 `/wallpaper/_client` 都带；记录后立刻补发探针，下一次成功加载（`appliedSignature = signature`）后清空
+- **测试**：新增 `test/rotate.test.mjs`（4 例，抽取真实 `load()` 源码 + 替身 fetch / 计时器）；指向坏的 1.1.2 源码时 4 例全红，修复后 `node --test` 共 26 例；`scripts/check.mjs` 加第 11 节 11 项
+
 ## 1.1.2 — 2026-10-06
 
 - **探针实时化**：之前 `/_probe` 只在启动后 1.5 秒上报一次，`switches` 永远是初始值；现在每次切换后 0.6 秒（`scheduleProbe()`，防抖）重发一次，另有 60 秒心跳，`switches` / `layerDetail` / `audit` / `prewarm` 都保持最新
