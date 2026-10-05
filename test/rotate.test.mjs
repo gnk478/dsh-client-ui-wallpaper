@@ -238,3 +238,27 @@ test('轮换选中：同时给了视频与静态图时视频优先（点「▶ �
   assert.equal(h.painted.length, 1);
   assert.equal(h.painted[0].name, 'v.mp4', '显式选的动态版必须优先于同一次手选里的静态图');
 });
+
+
+test('轮换选中：面板手选静态图时 config.pick 必须压过 state 里遗留的视频', async () => {
+  const h = makeHarness(okList(
+    { mode: 'rotate', rotateSeconds: 45, shuffle: false, video: 'v.mp4', image: 'x.png', pick: 'image', autoInk: true },
+    { images: ['x.png'], videos: ['v.mp4'], sequence: [{ kind: 'image', name: 'x.png' }, { kind: 'video', name: 'v.mp4' }] },
+  ));
+  await h.api.load();
+  await flush();
+  assert.equal(h.painted.length, 1, 'rotate 分支仍然只画一次');
+  assert.equal(h.painted[0].name, 'x.png', '1.1.6 回归：手选静态图曾因 state.video 还在而被视频盖住');
+  assert.deepEqual(h.intervals, [45000], '手选之后轮换定时器必须还在');
+  await h.runInterval(0);
+  assert.equal(h.painted[1].name, 'v.mp4', '下一拍按列表顺序继续轮换，不会卡在手选那一张');
+});
+
+test('轮换选中：pick 指向静态图但库里已没有它时，回落到轮换列表开头而不是报错', async () => {
+  const h = makeHarness(okList({ mode: 'rotate', rotateSeconds: 45, shuffle: false, video: 'b.mp4', pick: 'image', autoInk: true }));
+  await h.api.load();
+  await flush();
+  assert.equal(h.painted.length, 1);
+  assert.equal(h.painted[0].name, 'b.mp4', '选中的图已不在库里时回落到 state 里记着的那一张，不报错');
+  assert.equal(h.api.peek().loadFailure, null, '这种回落不该被记成加载失败');
+});
