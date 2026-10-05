@@ -1,6 +1,6 @@
 {
   "name": "dsh-client-ui-wallpaper",
-  "version": "1.1.7",
+  "version": "1.1.8",
   "description": "把本地图片/视频（Dynamic Wallpaper.app 素材）用作 DSH 桌面客户端壁纸：铺满窗口、背景模糊、面板/左右侧栏独立透明度、自动深浅字、视频缩略图、轮换与播放列表同步。· Use local images or videos as the DSH desktop client background.",
   "type": "module",
   "main": "lib/index.js",
@@ -21,7 +21,8 @@
     "url": "git+https://github.com/gnk478/dsh-client-ui-wallpaper.git"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=20",
+    "dsh": ">=0.2.0-rc.2"
   },
   "files": [
     "lib",
@@ -57,7 +58,8 @@
       "patch": "./cordis.patch.yml"
     },
     "client": {
-      "platform": "web"
+      "platform": "web",
+      "immediately": true
     }
   },
   "bugs": {

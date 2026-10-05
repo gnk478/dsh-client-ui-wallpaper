@@ -1,11 +1,19 @@
 # 更新日志
 
+## 1.1.8 — 2026-10-06
+
+- **进社区市场（分发）**：向 [awesome-dsh-plugin](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin) 提交条目 `data/plugins/gnk478__dsh-client-ui-wallpaper.yml`（`category: theme`），收录后进 dsh-market 的 Themes 页、可一键安装与升级
+- **清单补齐（`package.json`）**：`dsh.client` 加 `"immediately": true`（客户端插件随宿主启动即挂载，壁纸层与设置面板不再等懒加载；依据 DSH 自带 UI 插件模板 `templates/decoration/package.json` 与运行时 `graphRow` 的 `fields.immediately`）；`engines` 加 `"dsh": ">=0.2.0-rc.2"`（dshmarket 的 `lib/discovery-compatibility.js` 读 `engines.dsh`/`dsh.engines.dsh`，当前实测宿主为 `@deepseek-ai/dsh` 0.2.0-rc.2）
+- **安装文档改为生态标准路径（README）**：桌面端走 App 内插件市场（`desktop` profile 由 Electron 独占管理，CLI 会拒绝 `profile "desktop" is managed exclusively by the Electron application`）；其他 profile 一行 `dsh plugin --profile web add dsh-client-ui-wallpaper`（自动写进 `dsh.profile.bundles`，不用手改 `cordis.patch.yml`）；并写明 pnpm 11 `minimumReleaseAge=24h` 冷却——升级要写版本号，`@latest` 装不到刚发布的版本；`scripts/install.mjs` 降级为 fallback（会手改 profile 文件，归属插件管理器，可能被覆盖）
+- **截图清单**：仓库根新增 `screenshots.json`（`["docs/screenshot.png"]`），市场按它取图，以后换图不用再提 PR
+- **测试**：无代码改动，`node --test` 仍 54 例、`node scripts/check.mjs` 全绿
 ## 1.1.7 — 2026-10-06
 
 - **面板手选失效（修复）**：1.1.6 引入的 `modeAfterPick()` 被写在了 `apply()` 内部，而面板 `wallpaperSettingsElement()` 属于工厂作用域 —— 面板 onClick 闭包看不到它，点缩略图时同步抛 `Uncaught ReferenceError: modeAfterPick is not defined`，`save()` 从未执行，表现为「点任何壁纸都没反应」。现在函数提升回工厂作用域（面板闭包可见），并保留 1.1.6 的语义：轮换开着时手选只改「当前这一张」
 - **手选优先显示（加固）**：三处手选（静态图缩略图 / 动态缩略图 / 「▶ 动态」按钮）都带上 `pick: "image" | "video"`（宿主 `POST /wallpaper/state` 校验并持久化，非法值 400），`load()` 读 `config.pick`，rotate 分支优先定位手选的那一类、`currentNode()` 用 `nodeFor()` 兜底 —— 修掉「轮换开着时手选静态图会被上次手选的视频盖住」，且只影响首帧，之后照常轮换
 - **点击留痕**：新增 `panelPick { image, video, at, last }`，三处面板 onClick 在 `save()` 前调用 `notePick()`，经 `collect()` / `reportClient()` 进 `/_probe` 与 `/_client`；「点了没反应」时一眼能分清是点击没进来还是状态没生效
 - **测试**：`test/rotate.test.mjs` +2 例（`pick: "image"` 压过遗留 `video`；`pick` 的素材不在库里时先画它）、`test/client.test.mjs` 切片标记改为工厂作用域的 `modeAfterPick`，`node --test` 共 54 例；`scripts/check.mjs` 第 14 节 +2 项（三个入口的 `notePick`、`panelPick` 上报）
+
 ## 1.1.6 — 2026-10-06
 
 - **手选壁纸不再关掉自动轮换（修复）**：面板里点静态图缩略图 / 动态壁纸缩略图 / 「▶ 动态」按钮曾经硬编码 `mode: "image"` / `mode: "video"`，等于顺手把自动轮换关掉（1.1.1–1.1.5 一直如此）。现在统一走 `modeAfterPick(cfg.mode, fallback)`——轮换开着时手选只改「当前这一张」，`mode` 保持 `rotate`

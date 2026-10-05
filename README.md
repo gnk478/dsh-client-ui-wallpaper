@@ -53,17 +53,35 @@
 
 ## 安装
 
-三种方式任选一种；装完刷新页面（或重启 DSH），打开 **设置 → 壁纸**：
+要求宿主 **DSH ≥ 0.2.0-rc.2**（本插件实际测试的版本）。装完刷新页面（或重启 DSH），打开 **设置 → 壁纸**。
 
-**A. 从 npm 装**（[dsh-client-ui-wallpaper](https://www.npmjs.com/package/dsh-client-ui-wallpaper)）
+**A. 桌面 App：App 内插件市场**（推荐）
+
+DSH Desktop 的 `desktop` profile 由 Electron 应用独占管理，命令行会直接拒绝（`profile "desktop" is managed exclusively by the Electron application`），所以桌面端请在 **设置 → 插件市场** 里搜索安装。本插件已提交社区注册表 [awesome-dsh-plugin](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin)（[条目文件](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/blob/main/data/plugins/gnk478__dsh-client-ui-wallpaper.yml)），收录后即可在市场一键安装与升级。
+
+**B. 其他 profile（web / 自建 profile）：一行命令**
+
+```bash
+dsh plugin --profile web add dsh-client-ui-wallpaper
+```
+
+CLI 会把包装进 profile 的 `node_modules`，并自动把包名追加到 profile 的 `dsh.profile.bundles`——`cordis.patch.yml` 不需要手动改。命令行需要 `pnpm` 在 `PATH`。
+
+> **升级要写版本号**：pnpm 11 默认 `minimumReleaseAge=24h`，发布未满 24 小时的版本，`dsh plugin add <包名>` 与 `@latest` 都只会装到上一版（并提示 `x.y.z is available`）。要立刻升级请指定版本：
+> ```bash
+> dsh plugin --profile web add dsh-client-ui-wallpaper@1.1.8
+> ```
+
+**C. 手动安装（fallback）**
+
+profile 已经被手动改过、或环境里没有 `dsh` 命令时用；会直接改 profile 的 `cordis.patch.yml`（先备份）：
 
 ```bash
 npm i dsh-client-ui-wallpaper
-# 装进某个 profile（默认 desktop）；会先备份该 profile 的 cordis.patch.yml
 node node_modules/dsh-client-ui-wallpaper/scripts/install.mjs --profile desktop
 ```
 
-**B. 从源码装**
+从源码同理：
 
 ```bash
 git clone https://github.com/gnk478/dsh-client-ui-wallpaper.git
@@ -71,11 +89,7 @@ cd dsh-client-ui-wallpaper
 node scripts/install.mjs --profile desktop
 ```
 
-**C. 用 DSH 插件管理器**（把 clone / 解压好的目录挂进去）
-
-```bash
-dsh plugin --profile desktop add link:/绝对路径/dsh-client-ui-wallpaper
-```
+> profile 的 `package.json` / `cordis.patch.yml` 归插件管理器所有，手写的 insert 行可能在它下次操作时被覆盖——能用市场或 CLI 就不要用它。
 
 ## 快速开始
 
@@ -187,7 +201,7 @@ dsh-client-ui-wallpaper/
 3. 推 tag 或手动触发 [`.github/workflows/publish.yml`](.github/workflows/publish.yml)：
 
 ```bash
-git tag v1.1.7 && git push origin v1.1.7   # tag 触发
+git tag v1.1.8 && git push origin v1.1.8   # tag 触发
 gh workflow run publish.yml                 # 或手动触发
 ```
 
@@ -197,8 +211,8 @@ gh workflow run publish.yml                 # 或手动触发
 **Release 附件**：
 
 ```bash
-git archive --format=zip -o dsh-client-ui-wallpaper-1.1.7.zip HEAD
-gh release create v1.1.7 dsh-client-ui-wallpaper-1.1.7.zip
+git archive --format=zip -o dsh-client-ui-wallpaper-1.1.8.zip HEAD
+gh release create v1.1.8 dsh-client-ui-wallpaper-1.1.8.zip
 ```
 
 **CI**：[`.github/workflows/check.yml`](.github/workflows/check.yml) 在 push / PR 时跑 `node scripts/check.mjs` 与 `node --test`，也是顶部徽章的来源；两个工作流的副本放在 `examples/` 下方便复制。
