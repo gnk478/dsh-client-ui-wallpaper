@@ -40,6 +40,9 @@
 | 视频省电暂停 | 窗口不可见时暂停播放，回到前台自动续播（隐藏期间不切新壁纸） |
 | 轮换过渡 | 交叉淡入淡出 0.7s；系统开启「减少动态效果」或窗口隐藏时直接切换 |
 | 首帧就绪再淡入 | 新壁纸等首帧解码完成（视频 `loadeddata`、图片 `load`/`decode`，最多等 600ms）才开始淡入，避免大视频「先透明后硬切」 |
+| 图层自愈 | 每 10 秒审计一次壁纸层：除面纱与当前节点外，活过过渡宽限（700ms + 250ms）的节点一律判定为残留并回收；层内每个节点的 tag/来源/暂停/透明度/存活时长都上报到 `/_probe` 的 `layerDetail` |
+| 探针实时化 | 每次切换壁纸后 0.6 秒、以及每 60 秒再发一次 `/_probe`，`switches` / `layerDetail` / `audit` / `prewarm` 都是最新值（1.1.1 之前只在启动后 1.5 秒上报一次） |
+| 大文件不预热 | 轮换预热前先用 `HEAD` 问一次文件大小，超过 50MB 的素材不提前建节点（库里最大的视频 196MB），`/_probe` 的 `prewarm` 记录 warmed / skipped / dropped |
 | 浅色壁纸用深色字 | 关掉就固定用浅色字 |
 | 同步播放列表 | 一键把 Dynamic Wallpaper.app 播放列表里的素材同步进来 |
 | 删除（缩略图悬停） | 移到「废纸篓」（可恢复）+ 删缩略图缓存 + 从轮换移除 + 记入同步跳过名单 |
@@ -167,7 +170,7 @@ dsh-client-ui-wallpaper/
 
   ```bash
   node scripts/check.mjs
-  node --test                                          # 行为测试（mock ctx：路由 / 回收站 / 缩略图 GC / 随机轮换 / crossfade / 首帧就绪），1.1.1 起共 19 例
+  node --test                                          # 行为测试（mock ctx：路由 / 回收站 / 缩略图 GC / 随机轮换 / crossfade / 首帧就绪 / 图层审计），1.1.2 起共 22 例
   curl -s http://127.0.0.1:19387/wallpaper/_client | python3 -m json.tool | head -40   # 客户端自报状态
   curl -s http://127.0.0.1:19387/wallpaper/_hits                                        # 各路由请求计数
   ```
@@ -181,7 +184,7 @@ dsh-client-ui-wallpaper/
 3. 推 tag 或手动触发 [`.github/workflows/publish.yml`](.github/workflows/publish.yml)：
 
 ```bash
-git tag v1.1.1 && git push origin v1.1.1   # tag 触发
+git tag v1.1.2 && git push origin v1.1.2   # tag 触发
 gh workflow run publish.yml                 # 或手动触发
 ```
 
@@ -191,8 +194,8 @@ gh workflow run publish.yml                 # 或手动触发
 **Release 附件**：
 
 ```bash
-git archive --format=zip -o dsh-client-ui-wallpaper-1.1.1.zip HEAD
-gh release create v1.1.1 dsh-client-ui-wallpaper-1.1.1.zip
+git archive --format=zip -o dsh-client-ui-wallpaper-1.1.2.zip HEAD
+gh release create v1.1.2 dsh-client-ui-wallpaper-1.1.2.zip
 ```
 
 **CI**：[`.github/workflows/check.yml`](.github/workflows/check.yml) 在 push / PR 时跑 `node scripts/check.mjs` 与 `node --test`，也是顶部徽章的来源；两个工作流的副本放在 `examples/` 下方便复制。
@@ -205,7 +208,7 @@ gh release create v1.1.1 dsh-client-ui-wallpaper-1.1.1.zip
 | 侧栏/右栏透明度拖了没反应 | 常见于「透明化扫描」清掉了底色；本版本已对右栏跳过扫描并直接写 `background-color`。若自行改过选择器，核对 `SIDEBAR_CSS` / `SIDEBAR_LEFT_CSS` |
 | 代码块字看不清 | 代码块应「只跟外观走」；检查 `CODEFIX_CSS` 是否注入 |
 | 视频缩略图一直是灰的 | 首次访问 `/wallpaper/thumb/<name>` 会调 `qlmanage` 抽帧，稍等再刷新；检查 `~/.dsh/wallpaper-thumbs/` |
-| 换壁纸没有淡入效果 | 首次绘制、重绘同一张、窗口隐藏、或系统开了「减少动态效果」（`prefers-reduced-motion: reduce`）时都是直接切换，不做 0.7s 过渡。1.1.1 起淡入会先等新壁纸首帧就绪（最多 600ms），大视频不会再看成「秒切」；用 `/wallpaper/_probe` 的 `switches`（`lastReason` / `waited`）可确认最近一次为什么没淡 |
+| 换壁纸没有淡入效果 | 首次绘制、重绘同一张、窗口隐藏、或系统开了「减少动态效果」（`prefers-reduced-motion: reduce`）时都是直接切换，不做 0.7s 过渡。1.1.1 起淡入会先等新壁纸首帧就绪（最多 600ms），大视频不会再看成「秒切」；用 `/wallpaper/_probe` 的 `switches`（`lastReason` / `waited`）可确认最近一次为什么没淡。1.1.2 起这些统计是实时的（切换后 0.6 秒 + 每 60 秒刷新），另外 `layerDetail` 会逐个列出层里残留的节点、`audit.removed` 显示自愈回收了几个 |
 | 新素材不出现 | 刷新面板（宿主目录扫描有 4 秒快照缓存，见 `lib/index.js:229`）；确认扩展名在白名单（图片 jpg/jpeg/png/webp/gif/avif/bmp，视频 mp4/webm/mov/m4v） |
 | 改了 profile 文件不生效 | DSH 运行中会用内存配置回写 profile 文件；完全退出后再改，或改用「设置」界面 |
 | 面板打不开 / 报错 | 看 `/wallpaper/_client` 的 `lastError`，以及宿主日志 |
@@ -215,6 +218,8 @@ gh release create v1.1.1 dsh-client-ui-wallpaper-1.1.1.zip
 - 与 DSH 的布局类名（`_6Qf49G_*`）和色板 token（`--dsw-*`）耦合，DSH 升级后可能需要同步调整
 - 播放列表同步依赖 macOS 的 TCC 权限（完全磁盘访问）与 `qlmanage`（缩略图抽帧）
 - 删除会移到 `~/.Trash`（可恢复）；素材与废纸篓不在同一卷时 `rename` 失败，会回退为真删，面板提示「已永久删除」
+- 超过 50MB 的素材不做轮换预热，切换时的首次解码在几十毫秒到几百毫秒之间（首帧就绪上限仍是 600ms）
+- 图层自愈是兜底手段：正常情况 `audit.removed` 恒为 0；若它持续增长，`layerDetail` 会指出是哪个节点、来自哪个文件
 
 ## License
 

@@ -34,7 +34,7 @@ const FACTORY = new Function(
     'var disposed = false;',
     HELPERS,
     BLOCK,
-    'return { paint: paint, retire: retire, prefersReducedMotion: prefersReducedMotion, current: function () { return current; }, fadeTimer: function () { return fadeTimer; }, switchStats: function () { return switchStats; } };',
+    'return { paint: paint, retire: retire, auditLayer: auditLayer, prefersReducedMotion: prefersReducedMotion, current: function () { return current; }, fadeTimer: function () { return fadeTimer; }, switchStats: function () { return switchStats; }, layerAudit: function () { return layerAudit; } };',
   ].join('\n'),
 );
 
@@ -260,4 +260,43 @@ test('打断上一次淡入：被取消的旧节点不会卡在层里', () => {
   h.runTimers();
   assert.deepEqual(h.layer.children, [c, h.scrim], '层里只能剩当前节点');
   assert.equal(h.api.switchStats().fade, 2);
+});
+
+test('图层审计：超过过渡宽限的陌生节点被回收并计数', () => {
+  const h = harness();
+  const a = makeNode('img');
+  h.api.paint(a);
+  const stray = makeNode('video');
+  stray.dataset.dshWpMountedAt = String(Date.now() - 5000);
+  h.layer.append(stray);
+  const removed = h.api.auditLayer();
+  assert.equal(removed, 1);
+  assert.deepEqual(h.layer.children, [a, h.scrim], '陌生节点应被回收，当前节点与面纱保留');
+  assert.equal(stray.paused, true, '被回收的视频应先暂停');
+  const audit = h.api.layerAudit();
+  assert.equal(audit.checks, 1);
+  assert.equal(audit.removed, 1);
+  assert.equal(audit.last.removed, 1);
+});
+
+test('图层审计：正在过渡的旧节点处在宽限期内，不被打断', () => {
+  const h = harness();
+  const a = makeNode('img');
+  h.api.paint(a);
+  const b = makeNode('img');
+  h.api.paint(b);
+  assert.deepEqual(h.layer.children, [a, b, h.scrim], '过渡中：旧节点仍在下层');
+  assert.equal(h.api.auditLayer(), 0, '刚挂上的旧节点在 AUDIT_GRACE_MS 内，不应被回收');
+  assert.deepEqual(h.layer.children, [a, b, h.scrim]);
+  assert.equal(h.api.layerAudit().removed, 0);
+});
+
+test('图层审计：没有时间戳的陌生节点也按超龄处理', () => {
+  const h = harness();
+  const a = makeNode('img');
+  h.api.paint(a);
+  const stray = makeNode('img');
+  h.layer.append(stray);
+  assert.equal(h.api.auditLayer(), 1);
+  assert.deepEqual(h.layer.children, [a, h.scrim]);
 });

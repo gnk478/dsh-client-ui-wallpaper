@@ -1,5 +1,12 @@
 # 更新日志
 
+## 1.1.2 — 2026-10-06
+
+- **探针实时化**：之前 `/_probe` 只在启动后 1.5 秒上报一次，`switches` 永远是初始值；现在每次切换后 0.6 秒（`scheduleProbe()`，防抖）重发一次，另有 60 秒心跳，`switches` / `layerDetail` / `audit` / `prewarm` 都保持最新
+- **图层自愈**：`sweep()` 每 10 秒调 `auditLayer()`，除面纱与当前节点外、挂载超过 `AUDIT_GRACE_MS`（700 + 250ms）的节点一律回收并计数（`data-dsh-wp-mounted-at` 提供存活时长）；层内每个节点的 tag/来源/暂停/透明度/age 由 `mediaChildInfo()` 汇总进 `layerDetail`，用来定位是否真有未知路径在泄漏节点
+- **预热阈值**：轮换预热前用 `HEAD` + `sizeCache` 问 `content-length`，超过 `PREWARM_MAX_BYTES = 50MB` 不建预热节点（库里最大视频 196MB）；隐藏窗口或预热未被使用时调 `discardWarmed()` 停解码、释放 src，`prewarmStats` 上报 warmed / skipped / dropped
+- **测试**：`test/crossfade.test.mjs` 扩到 14 例（超龄陌生节点被回收、宽限期内不打断、无时间戳按超龄处理），`node --test` 共 22 例；`scripts/check.mjs` 加第 10 节 15 项
+
 ## 1.1.1 — 2026-10-05
 
 - **修：偶尔看不到淡入**：淡入前先等新壁纸首帧就绪（视频 `loadeddata`、图片 `load`/`decode`，`READY_MS = 600` 兜底超时照常淡入）——之前大体积视频解码慢，0.7s 过渡淡的是一个空节点，首帧上来时已经是硬切

@@ -119,6 +119,21 @@ console.log('9) 1.1.1 首帧就绪再淡入（修「偶尔没有淡入淡出」�
   check('预热节点不抢播 dshWpPrewarm', client.includes('dshWpPrewarm'));
   check('轮换提前预热 armPrewarm()', client.includes('function armPrewarm()'));
   check('打断守卫 paintSeq', client.includes('seq !== paintSeq'));
+console.log('10) 1.1.2 探针实时化 / 图层自愈 / 预热阈值');
+  check('图层审计 auditLayer()', client.includes('function auditLayer()'));
+  check('过渡宽限 AUDIT_GRACE_MS', client.includes('var AUDIT_GRACE_MS = FADE_MS + 250'));
+  check('挂载时间戳 dshWpMountedAt', client.includes('node.dataset.dshWpMountedAt = String(Date.now())'));
+  check('审计在 sweep 里跑', client.includes('var audited = auditLayer()'));
+  check('审计明细 mediaChildInfo()', client.includes('function mediaChildInfo(child)'));
+  check('探针上报 layerDetail/audit/prewarm', client.includes('layerDetail:') && client.includes('audit: layerAudit') && client.includes('prewarm: prewarmStats'));
+  check('切换即上报 scheduleProbe()', client.includes('function scheduleProbe()'));
+  check('上报防抖 PROBE_DEBOUNCE_MS', client.includes('var PROBE_DEBOUNCE_MS = 600'));
+  check('周期心跳 PROBE_PERIOD_MS', client.includes('var PROBE_PERIOD_MS = 60000') && client.includes('if (!disposed) sendProbe()'));
+  check('预热阈值 PREWARM_MAX_BYTES', client.includes('var PREWARM_MAX_BYTES = 50 * 1024 * 1024'));
+  check('用 HEAD 问文件大小', client.includes('method: "HEAD"'));
+  check('丢弃未用预热节点 discardWarmed()', client.includes('function discardWarmed()'));
+  check('预热计数 prewarmStats', client.includes('prewarmStats.skipped += 1') && client.includes('prewarmStats.dropped += 1'));
+  check('审计行为测试', readFileSync(path.join(ROOT, 'test', 'crossfade.test.mjs'), 'utf8').includes('图层审计'));
 console.log('');
 if (failed === 0) {
   console.log('全部通过 ✓');
