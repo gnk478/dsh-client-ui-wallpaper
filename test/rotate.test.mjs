@@ -20,7 +20,7 @@ const BLOCK = SOURCE.slice(startAt + 1, endAt);
 const PARAMS = [
   'ROUTE', 'fetch', 'document', 'applyVars', 'syncBlurFromState', 'syncSidebarFromState',
   'paint', 'videoNode', 'imageNode', 'nextIndex', 'setTimeout', 'clearTimeout', 'setInterval',
-  'clearInterval', 'PREWARM_MAX_BYTES', 'prewarmStats', 'scheduleProbe',
+  'clearInterval', 'PREWARM_MAX_BYTES', 'prewarmStats', 'scheduleProbe', 'auditSelectors',
 ];
 
 const PRELUDE = [
@@ -45,6 +45,7 @@ function makeHarness(listResult) {
   const responses = Array.isArray(listResult) ? listResult.slice() : [listResult];
   let listCalls = 0;
 
+  let audits = 0;
   const fetchStub = (url, init) => {
     const method = init && init.method ? init.method : 'GET';
     if (method === 'HEAD') return Promise.resolve({ headers: { get: () => '1024' } });
@@ -80,11 +81,12 @@ function makeHarness(listResult) {
     50 * 1024 * 1024,
     { warmed: 0, skipped: 0, dropped: 0, last: null },
     () => {},
+    () => { audits += 1; return 0; },
   );
 
   const runTimeout = async (i) => { timeoutFns[i](); await flush(); };
 
-  return { api, painted, intervals, timeouts, calls: () => listCalls, runTimeout };
+  return { api, painted, intervals, timeouts, calls: () => listCalls, runTimeout, audits: () => audits };
 }
 
 const okList = (config, overrides = {}) => ({
@@ -112,6 +114,7 @@ test('轮换加载：画出当前项一次、定时器用 rotateSeconds、无失
   assert.deepEqual(h.intervals, [45000], '轮换间隔必须是 rotateSeconds 秒');
   assert.equal(h.timeouts[0], 37000, '预热在 rotateSeconds - 8 秒后触发');
   assert.equal(h.api.peek().loadFailure, null);
+  assert.equal(h.audits(), 1, 'load() 每轮都要做一次选择器体检');
 });
 
 test('轮换加载：rotateSeconds 非法或缺省时回落到 600 秒', async () => {

@@ -44,6 +44,7 @@
 | 探针实时化 | 每次切换壁纸后 0.6 秒、以及每 60 秒再发一次 `/_probe`，`switches` / `layerDetail` / `audit` / `prewarm` 都是最新值（1.1.1 之前只在启动后 1.5 秒上报一次） |
 | 大文件不预热 | 预热前先取素材大小（1.1.4 起宿主在 `list.json` 里直接给 `sizes`，取不到才回退 `HEAD`），超过 50MB 的素材不提前建节点（库里最大的视频 196MB），`/_probe` 的 `prewarm` 记录 warmed / skipped / dropped 与最近一次的字节数 |
 | 加载失败不静默 | `list.json` 加载链一旦抛错，错误名与 message 会记进 `loadFailure`（`/wallpaper/_probe` 与 `/wallpaper/_client` 都带），并在下一次成功加载后清空——不再出现「面板正常但壁纸整块空白、没有任何线索」 |
+| 选择器失效不静默 | 客户端每 60 秒体检 8 组界面挂钩（输入框/侧栏/右栏/弹窗/气泡/工具栏/头像/代码块）：带锚点（`textarea`、`[class*="sidebar"]`、`[aria-modal="true"]` 等）的一组连续两轮都匹配不到才算失效（避开 React 渲染中途的假警报），此时 `console.warn` 并把 `missing` / `detail` 写进 `/wallpaper/_probe` 的 `selectorHealth`——DSH 升级后「样式悄悄没生效」有据可查 |
 | 浅色壁纸用深色字 | 关掉就固定用浅色字 |
 | 同步播放列表 | 一键把 Dynamic Wallpaper.app 播放列表里的素材同步进来 |
 | 删除（缩略图悬停） | 移到「废纸篓」（可恢复）+ 删缩略图缓存 + 从轮换移除 + 记入同步跳过名单 |
@@ -171,7 +172,7 @@ dsh-client-ui-wallpaper/
 
   ```bash
   node scripts/check.mjs
-  node --test                                          # 行为测试（mock ctx：路由 / 回收站 / 缩略图 GC / 随机轮换 / crossfade / 首帧就绪 / 图层审计），1.1.4 起共 30 例（含轮换加载路径与预热大小来源）
+  node --test                                          # 行为测试（宿主：路由 / 回收站 / 缩略图 GC；客户端：轮换加载与预热 / crossfade / 首帧就绪 / 图层审计 / applyVars / autoInk / classifyTile / syncBlur / 选择器体检），1.1.5 起共 46 例
   curl -s http://127.0.0.1:19387/wallpaper/_client | python3 -m json.tool | head -40   # 客户端自报状态
   curl -s http://127.0.0.1:19387/wallpaper/_hits                                        # 各路由请求计数
   ```
@@ -185,7 +186,7 @@ dsh-client-ui-wallpaper/
 3. 推 tag 或手动触发 [`.github/workflows/publish.yml`](.github/workflows/publish.yml)：
 
 ```bash
-git tag v1.1.4 && git push origin v1.1.4   # tag 触发
+git tag v1.1.5 && git push origin v1.1.5   # tag 触发
 gh workflow run publish.yml                 # 或手动触发
 ```
 
@@ -195,8 +196,8 @@ gh workflow run publish.yml                 # 或手动触发
 **Release 附件**：
 
 ```bash
-git archive --format=zip -o dsh-client-ui-wallpaper-1.1.4.zip HEAD
-gh release create v1.1.4 dsh-client-ui-wallpaper-1.1.4.zip
+git archive --format=zip -o dsh-client-ui-wallpaper-1.1.5.zip HEAD
+gh release create v1.1.5 dsh-client-ui-wallpaper-1.1.5.zip
 ```
 
 **CI**：[`.github/workflows/check.yml`](.github/workflows/check.yml) 在 push / PR 时跑 `node scripts/check.mjs` 与 `node --test`，也是顶部徽章的来源；两个工作流的副本放在 `examples/` 下方便复制。
@@ -207,6 +208,7 @@ gh release create v1.1.4 dsh-client-ui-wallpaper-1.1.4.zip
 |---|---|
 | 壁纸没铺满 | 面板里确认已选壁纸；检查 `/wallpaper/list.json` 是否有素材 |
 | 壁纸整块空白（面板一切正常） | 1.1.1 / 1.1.2 的已知缺陷：rotate 分支丢了 `var seconds` / `var index` 声明，`load()` 一进分支就抛 `ReferenceError`，又被静默的 `.catch` 吞掉 → 壁纸再也不绘制且毫无提示。升级到 1.1.3；之后若再遇到，读 `/wallpaper/_probe` 的 `loadFailure`（`{ at, name, message }`） |
+| DSH 升级后样式或自动字色悄悄没生效 | 1.1.5 起客户端每 60 秒体检一次界面挂钩，读 `/wallpaper/_probe` 的 `selectorHealth`：`missing` 列出失效的挂钩（`missing: []` 即正常），`detail` 给出每组的匹配数与命中的那条选择器；带锚点的组连续两轮落空才会告警，所以渲染中途不会误报。告警同时会 `console.warn("[dsh-wallpaper] UI 选择器失效：…")` |
 | 侧栏/右栏透明度拖了没反应 | 常见于「透明化扫描」清掉了底色；本版本已对右栏跳过扫描并直接写 `background-color`。若自行改过选择器，核对 `SIDEBAR_CSS` / `SIDEBAR_LEFT_CSS` |
 | 代码块字看不清 | 代码块应「只跟外观走」；检查 `CODEFIX_CSS` 是否注入 |
 | 视频缩略图一直是灰的 | 首次访问 `/wallpaper/thumb/<name>` 会调 `qlmanage` 抽帧，稍等再刷新；检查 `~/.dsh/wallpaper-thumbs/` |
@@ -217,7 +219,7 @@ gh release create v1.1.4 dsh-client-ui-wallpaper-1.1.4.zip
 
 ## 已知限制
 
-- 与 DSH 的布局类名（`_6Qf49G_*`）和色板 token（`--dsw-*`）耦合，DSH 升级后可能需要同步调整
+- 与 DSH 的布局类名（`_6Qf49G_*`）和色板 token（`--dsw-*`）耦合，DSH 升级后可能需要同步调整；1.1.5 起这类失效不再静默——每 60 秒体检一次，`selectorHealth.missing` 会点名落空的那组（`detail` 给出匹配数）
 - 播放列表同步依赖 macOS 的 TCC 权限（完全磁盘访问）与 `qlmanage`（缩略图抽帧）
 - 删除会移到 `~/.Trash`（可恢复）；素材与废纸篓不在同一卷时 `rename` 失败，会回退为真删，面板提示「已永久删除」
 - 超过 50MB 的素材不做轮换预热，切换时的首次解码在几十毫秒到几百毫秒之间（首帧就绪上限仍是 600ms）

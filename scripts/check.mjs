@@ -156,6 +156,20 @@ console.log('12) 1.1.4 预热大小来源（list.json 带 sizes，HEAD 只做兜
   check('保留 HEAD 兜底', client.includes('method: "HEAD"') && client.includes('hasOwnProperty.call(sizeCache, name)'));
   check('预热大小来源测试（客户端）', readFileSync(path.join(ROOT, 'test', 'rotate.test.mjs'), 'utf8').includes('素材大小取自 list.json'));
   check('预热大小来源测试（宿主）', readFileSync(path.join(ROOT, 'test', 'host.test.mjs'), 'utf8').includes("body.sizes['a.png']"));
+console.log('13) 1.1.5 选择器静默失效告警');
+  check('选择器总表 UI_SELECTORS', client.includes('var UI_SELECTORS = ['));
+  check('每项都带 anchor 字段（缺席是否算失效的判据）', (client.match(/anchor:/g) || []).length >= 8);
+  check('体检函数 auditSelectors()', client.includes('function auditSelectors()'));
+  check('连续两轮才判定失效（strikes 宽限）', client.includes('if (strikes >= 2) missing.push(entry.id)') && client.includes('selectorHealth.strikes[entry.id] = 0'));
+  check('失效时 console.warn 而不是静默', client.includes('[dsh-wallpaper] UI 选择器失效：'));
+  check('失效时 noteError selector-missing', client.includes('noteError("selector-missing", missing.join(","), "auditSelectors")'));
+  check('恢复后清空 warned（再次失效会再告警）', client.includes('if (signature.length === 0) selectorHealth.warned = []'));
+  check('探针上报 selectorHealth', client.includes('selectorHealth: selectorHealth'));
+  check('reportClient 上报 selectorHealth', client.includes('payload.selectorHealth = selectorHealth'));
+  check('load() 每轮体检（早退之前）', client.includes('if (disposed || !data) return;\n\t\t\t\t\tauditSelectors();'));
+  check('启动 4 秒后补一轮体检', client.includes('if (!disposed) auditSelectors(); }, 4000);'));
+  check('客户端行为测试 test/client.test.mjs', existsSync(path.join(ROOT, 'test', 'client.test.mjs')) && readFileSync(path.join(ROOT, 'test', 'client.test.mjs'), 'utf8').includes('锚点在场但选择器落空，连续两轮才告警一次'));
+
 console.log('');
 if (failed === 0) {
   console.log('全部通过 ✓');

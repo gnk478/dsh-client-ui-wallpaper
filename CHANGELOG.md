@@ -1,5 +1,11 @@
 # 更新日志
 
+## 1.1.5 — 2026-10-06
+
+- **选择器失效不再静默（新）**：客户端每 60 秒体检 8 组界面挂钩（输入框 / 侧栏 / 右栏 / 弹窗 / 气泡 / 工具栏 / 头像 / 代码块，每组带 `selectors` 与「该界面是否在场」的 `anchor`）。带锚点的组连续两轮匹配为 0 才判定失效（`strikes >= 2`，避开 React 渲染中途的假警报），此时 `console.warn("[dsh-wallpaper] UI 选择器失效：…")` + `noteError("selector-missing", …)`；恢复后清空 `warned`，再次失效会重新告警。`selectorHealth`（`at/checks/missing/detail/strikes`）经 `/_probe` 与 `/_client` 可读，`detail` 给出每组命中的那条选择器与匹配数
+- **体检时机**：`load()` 里每个 60 秒周期一次（放在配置未变的早退检查之前），启动后 4 秒再补一轮——DSH 升级换掉类名后，最迟一分钟就有明确告警
+- **测试**：新增 `test/client.test.mjs`（16 例：applyVars 3 / applyAutoInk 3 / classifyTile 2 / syncBlurFromState 4 / auditSelectors 4，全部抽真实源码 + 替身），`test/rotate.test.mjs` 加 1 条断言（每轮 `load()` 必须做一次体检）；`node --test` 共 46 例；`scripts/check.mjs` 加第 13 节 13 项
+
 ## 1.1.4 — 2026-10-06
 
 - **修：50MB 预热阈值形同虚设**：1.1.2 引入的阈值靠 `HEAD` 响应头的 `content-length` 判断，但 GUI 的 `dsh-app://` 协议层读不到该响应头——线上实测 `prewarm.last.bytes` 恒为 `0`、`skipped` 恒为 `0`，196MB 的视频照样被预热。现在宿主在 `/wallpaper/list.json` 里直接返回 `sizes`（序列内每个素材 `stat` 出的字节数），客户端 60 秒一次的 `load()` 顺带刷新 `sizeCache`；抓不到大小时才回退 `HEAD`（兼容老宿主）
