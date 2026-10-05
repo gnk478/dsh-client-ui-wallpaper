@@ -70,6 +70,15 @@ test('list.json 列出素材与配置', async () => {
   assert.ok(Array.isArray(body.sequence));
 });
 
+test('rotate 序列带素材大小（客户端预热阈值用，HEAD 响应头拿不到时也能生效）', async () => {
+  await fetch(base + '/state', json({ mode: 'rotate' }));
+  const body = await (await fetch(base + '/list.json')).json();
+  assert.equal(body.sizes['a.png'], 2048, '尺寸应来自宿主 stat');
+  assert.equal(Object.keys(body.sizes).length, 3, '序列里每个素材都要有大小');
+  assert.ok(Object.values(body.sizes).every((size) => Number.isInteger(size) && size > 0));
+  await fetch(base + '/state', json({ mode: 'image' }));
+});
+
 test('state 校验：非法值 400，shuffle 往返真实生效', async () => {
   const badBlur = await fetch(base + '/state', json({ blur: 'x' }));
   assert.equal(badBlur.status, 400);

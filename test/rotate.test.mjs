@@ -32,6 +32,7 @@ const PRELUDE = [
   'var timer;',
   'var prewarmTimer;',
   'var loadFailure = null;',
+  'var sizeCache = {};',
 ].join('\n');
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -40,6 +41,7 @@ function makeHarness(listResult) {
   const painted = [];
   const intervals = [];
   const timeouts = [];
+  const timeoutFns = [];
   const responses = Array.isArray(listResult) ? listResult.slice() : [listResult];
   let listCalls = 0;
 
@@ -56,7 +58,7 @@ function makeHarness(listResult) {
     [
       PRELUDE,
       BLOCK,
-      'return { load: load, peek: function () { return { loadFailure: loadFailure, appliedSignature: appliedSignature, timer: timer }; } };',
+      'return { load: load, peek: function () { return { loadFailure: loadFailure, appliedSignature: appliedSignature, timer: timer, prewarm: prewarmStats }; } };',
     ].join('\n'),
   );
 
@@ -71,7 +73,7 @@ function makeHarness(listResult) {
     (name) => ({ tagName: 'VIDEO', name }),
     (name) => ({ tagName: 'IMG', name }),
     (i, total) => (i + 1) % total,
-    (fn, delay) => { timeouts.push(delay); return timeouts.length; },
+    (fn, delay) => { timeouts.push(delay); timeoutFns.push(fn); return timeouts.length; },
     () => {},
     (fn, delay) => { intervals.push(delay); return intervals.length; },
     () => {},
@@ -80,7 +82,9 @@ function makeHarness(listResult) {
     () => {},
   );
 
-  return { api, painted, intervals, timeouts, calls: () => listCalls };
+  const runTimeout = async (i) => { timeoutFns[i](); await flush(); };
+
+  return { api, painted, intervals, timeouts, calls: () => listCalls, runTimeout };
 }
 
 const okList = (config, overrides = {}) => ({
@@ -95,6 +99,7 @@ const okList = (config, overrides = {}) => ({
       { kind: 'video', name: 'c.mp4' },
     ],
     liveMap: {},
+    sizes: overrides.sizes || {},
   }),
 });
 
@@ -145,4 +150,44 @@ test('轮换加载：下一次成功会清掉 loadFailure', async () => {
   await flush();
   assert.equal(h.api.peek().loadFailure, null);
   assert.equal(h.painted.length, 1);
+});
+
+test('轮换预热：素材大小取自 list.json，超过阈值只计数不建节点', async () => {
+  const big = 60 * 1024 * 1024;
+  const h = makeHarness(okList(
+    { mode: 'rotate', rotateSeconds: 45, shuffle: false, video: 'a.mp4', autoInk: true },
+    { sizes: { 'a.mp4': 1024, 'b.mp4': big, 'c.mp4': 2048 } },
+  ));
+  await h.api.load();
+  await flush();
+  await h.runTimeout(0);
+  const stats = h.api.peek().prewarm;
+  assert.equal(stats.skipped, 1, '超过 PREWARM_MAX_BYTES 的素材必须只计数、不建节点');
+  assert.equal(stats.warmed, 0);
+  assert.equal(stats.last.name, 'b.mp4');
+  assert.equal(stats.last.bytes, big, '大小应直接来自 list.json，不再依赖 HEAD 响应头');
+});
+
+test('轮换预热：小素材照常预热', async () => {
+  const h = makeHarness(okList(
+    { mode: 'rotate', rotateSeconds: 45, shuffle: false, video: 'a.mp4', autoInk: true },
+    { sizes: { 'a.mp4': 1024, 'b.mp4': 2048, 'c.mp4': 4096 } },
+  ));
+  await h.api.load();
+  await flush();
+  await h.runTimeout(0);
+  const stats = h.api.peek().prewarm;
+  assert.equal(stats.warmed, 1);
+  assert.equal(stats.skipped, 0);
+  assert.equal(stats.last.bytes, 2048);
+});
+
+test('轮换预热：list.json 未带大小时回退 HEAD 探测', async () => {
+  const h = makeHarness(okList({ mode: 'rotate', rotateSeconds: 45, shuffle: false, video: 'a.mp4', autoInk: true }));
+  await h.api.load();
+  await flush();
+  await h.runTimeout(0);
+  const stats = h.api.peek().prewarm;
+  assert.equal(stats.last.bytes, 1024, 'HEAD 兜底仍要工作（老宿主 + 新客户端）');
+  assert.equal(stats.warmed, 1);
 });

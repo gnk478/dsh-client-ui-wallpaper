@@ -148,6 +148,14 @@ console.log('11) 1.1.3 轮换加载路径（1.1.1/1.1.2 丢声明导致 load() �
   check('成功加载清空 loadFailure', client.includes('appliedSignature = signature;\n\t\t\t\t\tloadFailure = null;'));
   check('catch 记录错误不再静默', client.includes('message: error && error.message !== undefined'));
   check('轮换加载路径测试 test/rotate.test.mjs', existsSync(path.join(ROOT, 'test', 'rotate.test.mjs')));
+
+console.log('12) 1.1.4 预热大小来源（list.json 带 sizes，HEAD 只做兜底）');
+  check('宿主 stat 出素材大小', host.includes('const sizes = {};') && host.includes('sizes[entry.name] = (await stat(target)).size'));
+  check('list.json 输出 sizes', host.includes('const body = JSON.stringify({\n          sizes,'));
+  check('客户端用 list.json 的大小填充 sizeCache', client.includes('if (isFinite(sizeValue) && sizeValue > 0) sizeCache[sizeKey] = sizeValue;'));
+  check('保留 HEAD 兜底', client.includes('method: "HEAD"') && client.includes('hasOwnProperty.call(sizeCache, name)'));
+  check('预热大小来源测试（客户端）', readFileSync(path.join(ROOT, 'test', 'rotate.test.mjs'), 'utf8').includes('素材大小取自 list.json'));
+  check('预热大小来源测试（宿主）', readFileSync(path.join(ROOT, 'test', 'host.test.mjs'), 'utf8').includes("body.sizes['a.png']"));
 console.log('');
 if (failed === 0) {
   console.log('全部通过 ✓');

@@ -42,7 +42,7 @@
 | 首帧就绪再淡入 | 新壁纸等首帧解码完成（视频 `loadeddata`、图片 `load`/`decode`，最多等 600ms）才开始淡入，避免大视频「先透明后硬切」 |
 | 图层自愈 | 每 10 秒审计一次壁纸层：除面纱与当前节点外，活过过渡宽限（700ms + 250ms）的节点一律判定为残留并回收；层内每个节点的 tag/来源/暂停/透明度/存活时长都上报到 `/_probe` 的 `layerDetail` |
 | 探针实时化 | 每次切换壁纸后 0.6 秒、以及每 60 秒再发一次 `/_probe`，`switches` / `layerDetail` / `audit` / `prewarm` 都是最新值（1.1.1 之前只在启动后 1.5 秒上报一次） |
-| 大文件不预热 | 轮换预热前先用 `HEAD` 问一次文件大小，超过 50MB 的素材不提前建节点（库里最大的视频 196MB），`/_probe` 的 `prewarm` 记录 warmed / skipped / dropped |
+| 大文件不预热 | 预热前先取素材大小（1.1.4 起宿主在 `list.json` 里直接给 `sizes`，取不到才回退 `HEAD`），超过 50MB 的素材不提前建节点（库里最大的视频 196MB），`/_probe` 的 `prewarm` 记录 warmed / skipped / dropped 与最近一次的字节数 |
 | 加载失败不静默 | `list.json` 加载链一旦抛错，错误名与 message 会记进 `loadFailure`（`/wallpaper/_probe` 与 `/wallpaper/_client` 都带），并在下一次成功加载后清空——不再出现「面板正常但壁纸整块空白、没有任何线索」 |
 | 浅色壁纸用深色字 | 关掉就固定用浅色字 |
 | 同步播放列表 | 一键把 Dynamic Wallpaper.app 播放列表里的素材同步进来 |
@@ -171,7 +171,7 @@ dsh-client-ui-wallpaper/
 
   ```bash
   node scripts/check.mjs
-  node --test                                          # 行为测试（mock ctx：路由 / 回收站 / 缩略图 GC / 随机轮换 / crossfade / 首帧就绪 / 图层审计），1.1.3 起共 26 例（含轮换加载路径，防「静默空白」回归）
+  node --test                                          # 行为测试（mock ctx：路由 / 回收站 / 缩略图 GC / 随机轮换 / crossfade / 首帧就绪 / 图层审计），1.1.4 起共 30 例（含轮换加载路径与预热大小来源）
   curl -s http://127.0.0.1:19387/wallpaper/_client | python3 -m json.tool | head -40   # 客户端自报状态
   curl -s http://127.0.0.1:19387/wallpaper/_hits                                        # 各路由请求计数
   ```
@@ -185,7 +185,7 @@ dsh-client-ui-wallpaper/
 3. 推 tag 或手动触发 [`.github/workflows/publish.yml`](.github/workflows/publish.yml)：
 
 ```bash
-git tag v1.1.3 && git push origin v1.1.3   # tag 触发
+git tag v1.1.4 && git push origin v1.1.4   # tag 触发
 gh workflow run publish.yml                 # 或手动触发
 ```
 
@@ -195,8 +195,8 @@ gh workflow run publish.yml                 # 或手动触发
 **Release 附件**：
 
 ```bash
-git archive --format=zip -o dsh-client-ui-wallpaper-1.1.3.zip HEAD
-gh release create v1.1.3 dsh-client-ui-wallpaper-1.1.3.zip
+git archive --format=zip -o dsh-client-ui-wallpaper-1.1.4.zip HEAD
+gh release create v1.1.4 dsh-client-ui-wallpaper-1.1.4.zip
 ```
 
 **CI**：[`.github/workflows/check.yml`](.github/workflows/check.yml) 在 push / PR 时跑 `node scripts/check.mjs` 与 `node --test`，也是顶部徽章的来源；两个工作流的副本放在 `examples/` 下方便复制。

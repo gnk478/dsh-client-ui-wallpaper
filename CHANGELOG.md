@@ -1,5 +1,11 @@
 # 更新日志
 
+## 1.1.4 — 2026-10-06
+
+- **修：50MB 预热阈值形同虚设**：1.1.2 引入的阈值靠 `HEAD` 响应头的 `content-length` 判断，但 GUI 的 `dsh-app://` 协议层读不到该响应头——线上实测 `prewarm.last.bytes` 恒为 `0`、`skipped` 恒为 `0`，196MB 的视频照样被预热。现在宿主在 `/wallpaper/list.json` 里直接返回 `sizes`（序列内每个素材 `stat` 出的字节数），客户端 60 秒一次的 `load()` 顺带刷新 `sizeCache`；抓不到大小时才回退 `HEAD`（兼容老宿主）
+- **可见性**：`/_probe` 的 `prewarm.last.bytes` 现在能直接读出真实字节数（线上实测 16,554,373），阈值到底生效没有一眼可见
+- **测试**：`test/rotate.test.mjs` 加 3 例（list.json 大小 → 超阈值只计数不建节点、小素材照常预热、无大小时 HEAD 兜底），`test/host.test.mjs` 加 1 例（`sizes` 来自宿主 stat）；`node --test` 共 30 例；`scripts/check.mjs` 加第 12 节 6 项
+
 ## 1.1.3 — 2026-10-06
 
 - **修：1.1.1 / 1.1.2 轮换模式壁纸整块空白（严重）**：1.1.1 引入预热时，rotate 分支丢了 `var seconds = Number(config.rotateSeconds)`（含 15 秒下限、默认 600）与 `var index = 0` + 首帧定位循环，分支末尾也丢了 `return;`；`load()` 一进分支就读未声明的 `index` 抛 `ReferenceError`，又落进静默的 `.catch(function () {})` → 壁纸不再绘制且没有任何提示。现已恢复初始化与 `return;`
