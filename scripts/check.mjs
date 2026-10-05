@@ -139,8 +139,8 @@ console.log('10) 1.1.2 探针实时化 / 图层自愈 / 预热阈值');
 console.log('11) 1.1.3 轮换加载路径（1.1.1/1.1.2 丢声明导致 load() 一直静默失败）');
   check('轮换间隔 seconds 有声明', client.includes('var seconds = Number(config.rotateSeconds)'));
   check('间隔下限 clamp 到 600', client.includes('if (!isFinite(seconds) || seconds < 15) seconds = 600'));
-  check('轮换游标 index 有声明', client.includes('var index = 0;'));
-  check('首帧停在当前素材', client.includes('if (sequence[k].name === image || sequence[k].name === video) { index = k; break; }'));
+  check('轮换游标 index 有声明', client.includes('var index = locateIndex(video);'));
+  check('首帧停在当前素材', client.includes('if (sequence[k].name === target) return k;') && client.includes('if (index < 0) index = locateIndex(image);'));
   check('rotate 分支结束即 return', client.includes('\n\t\t\t\t\t\treturn;\n\t\t\t\t\t}'));
   check('加载失败留痕 loadFailure', client.includes('var loadFailure = null'));
   check('探针上报 loadFailure', client.includes('loadFailure: loadFailure'));
@@ -169,6 +169,21 @@ console.log('13) 1.1.5 选择器静默失效告警');
   check('load() 每轮体检（早退之前）', client.includes('if (disposed || !data) return;\n\t\t\t\t\tauditSelectors();'));
   check('启动 4 秒后补一轮体检', client.includes('if (!disposed) auditSelectors(); }, 4000);'));
   check('客户端行为测试 test/client.test.mjs', existsSync(path.join(ROOT, 'test', 'client.test.mjs')) && readFileSync(path.join(ROOT, 'test', 'client.test.mjs'), 'utf8').includes('锚点在场但选择器落空，连续两轮才告警一次'));
+
+console.log('14) 1.1.6 手选壁纸不再关掉自动轮换');
+  check('手选模式助手 modeAfterPick', client.includes('function modeAfterPick(currentMode, fallback) {') && client.includes('return currentMode === "rotate" ? "rotate" : fallback;'));
+  check('静态图缩略图保留轮换', client.includes('save({ image: name, mode: modeAfterPick(cfg.mode, "image") })'));
+  check('动态壁纸缩略图保留轮换', client.includes('save({ mode: modeAfterPick(cfg.mode, "video"), video: name })'));
+  check('「▶ 动态」小按钮保留轮换', client.includes('save({ mode: modeAfterPick(cfg.mode, "video"), video: liveMap[name], image: name })'));
+  check('旧的硬编码 mode:"image" 已消失', client.includes('save({ image: name, mode: "image" })') === false);
+  check('旧的硬编码 mode:"video" 已消失', client.includes('save({ mode: "video", video: name })') === false && client.includes('save({ mode: "video", video: liveMap[name], image: name })') === false);
+  check('起始序号 video 优先、其次静态图', client.includes('function locateIndex(target) {') && client.includes('if (index < 0) index = locateIndex(image);'));
+  check('手选素材不在轮换列表里也能先显示', client.includes('var offList = index < 0 && (image !== undefined || video !== undefined);') && client.includes('if (index < 0 && offList !== true) index = 0;'));
+  check('off-list 时画手选那一张', client.includes('function currentNode() {') && client.includes('return video !== undefined ? videoNode(video) : nodeFor(image);'));
+  check('绘制改用 currentNode()', client.includes('paint(currentNode());') && client.includes('paintNext = function () { paint(currentNode()); };'));
+  check('当前图按库内全量校验（不限于轮换池）', client.includes('var library = Array.isArray(data.library) ? data.library : images;') && client.includes('library.indexOf(config.image) >= 0 ? config.image : images[0]'));
+  check('宿主 rotate 模式允许返回轮换池外的当前图', host.includes('? (current.images.includes(wanted) ? wanted : pool[0])'));
+  check('回归测试（助手 + 加载路径）', readFileSync(path.join(ROOT, 'test', 'client.test.mjs'), 'utf8').includes('modeAfterPick：轮换开着时手选任何壁纸都保持轮换') && readFileSync(path.join(ROOT, 'test', 'rotate.test.mjs'), 'utf8').includes('视频优先'));
 
 console.log('');
 if (failed === 0) {

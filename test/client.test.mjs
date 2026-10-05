@@ -10,6 +10,7 @@ import { readFileSync } from 'node:fs';
  *   classifyTile        —— 缩略图深浅判定的排队与去重
  *   syncBlurFromState   —— 从宿主拉持久化的模糊值
  *   auditSelectors      —— 1.1.5 新增：DSH 选择器静默失效告警
+ *   modeAfterPick       —— 1.1.6 新增：手选壁纸不关掉自动轮换
  */
 const SOURCE = readFileSync(new URL('../lib/client.js', import.meta.url), 'utf8');
 
@@ -26,6 +27,7 @@ const INK_BLOCK = slice('\n\t\tvar AUTO_LIGHT = [', '\n\t\tfunction cleanupCodeI
 const SYNCBLUR_BLOCK = slice('\n\t\tfunction syncBlurFromState() {', '\n\t\t/** Settings');
 const CLASSIFY_BLOCK = slice('\n\t\t\t\tvar inkQueue = [];', '\n\t\t\t\tfunction inkBadge(kind, name) {');
 const AUDIT_BLOCK = slice('\n\t\tvar UI_SELECTORS = [', '\n\t\tfunction collect() {');
+const MODEPICK_BLOCK = slice('\n\t\t\tfunction modeAfterPick(', '\n\t\t\tfunction nextIndex(');
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -292,4 +294,25 @@ test('auditSelectors：命中时记录匹配数与命中的那条选择器', () 
   assert.equal(detail.find((item) => item.id === 'code').matched, 5, 'pre 与 code 要合并计数');
   assert.equal(h.api.health().checks, 1);
   assert.deepEqual(h.api.health().missing, []);
+});
+
+/* ---------- modeAfterPick（1.1.6） ---------- */
+
+const modeAfterPick = new Function(MODEPICK_BLOCK + '\nreturn modeAfterPick;')();
+
+test('modeAfterPick：轮换开着时手选任何壁纸都保持轮换', () => {
+  assert.equal(modeAfterPick('rotate', 'image'), 'rotate', '点静态图不能退出轮换');
+  assert.equal(modeAfterPick('rotate', 'video'), 'rotate', '点动态壁纸不能退出轮换');
+});
+
+test('modeAfterPick：其他模式按各自的目标模式走', () => {
+  assert.equal(modeAfterPick('image', 'image'), 'image');
+  assert.equal(modeAfterPick('image', 'video'), 'video');
+  assert.equal(modeAfterPick('video', 'image'), 'image');
+});
+
+test('modeAfterPick：模式缺失或异常时退回目标模式，不会写出 undefined', () => {
+  assert.equal(modeAfterPick(undefined, 'video'), 'video');
+  assert.equal(modeAfterPick(null, 'image'), 'image');
+  assert.equal(modeAfterPick('ROTATE', 'video'), 'video');
 });

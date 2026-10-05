@@ -37,6 +37,7 @@
 | 只轮换深色 / 只轮换浅色 | 优先用缩略图实测亮度判定，未采样时按配置名单取反 |
 | 自动加入新壁纸 | 新丢进目录的素材自动入库并追加进轮换 |
 | 自动轮换 / 间隔 | 秒数可调；可勾「随机轮换」（不会连续两次同一张） |
+| 手动选择不打断轮换 | 点缩略图（静态或动态）只换「当前这一张」，轮换照旧（1.1.6 起）；选中的素材即使不在轮换列表里也先显示它，下一拍回到列表继续 |
 | 视频省电暂停 | 窗口不可见时暂停播放，回到前台自动续播（隐藏期间不切新壁纸） |
 | 轮换过渡 | 交叉淡入淡出 0.7s；系统开启「减少动态效果」或窗口隐藏时直接切换 |
 | 首帧就绪再淡入 | 新壁纸等首帧解码完成（视频 `loadeddata`、图片 `load`/`decode`，最多等 600ms）才开始淡入，避免大视频「先透明后硬切」 |
@@ -172,7 +173,7 @@ dsh-client-ui-wallpaper/
 
   ```bash
   node scripts/check.mjs
-  node --test                                          # 行为测试（宿主：路由 / 回收站 / 缩略图 GC；客户端：轮换加载与预热 / crossfade / 首帧就绪 / 图层审计 / applyVars / autoInk / classifyTile / syncBlur / 选择器体检），1.1.5 起共 46 例
+  node --test                                          # 行为测试（宿主：路由 / 回收站 / 缩略图 GC；客户端：轮换加载与预热 / crossfade / 首帧就绪 / 图层审计 / applyVars / autoInk / classifyTile / syncBlur / 选择器体检 / 手选不打断轮换），1.1.6 起共 52 例
   curl -s http://127.0.0.1:19387/wallpaper/_client | python3 -m json.tool | head -40   # 客户端自报状态
   curl -s http://127.0.0.1:19387/wallpaper/_hits                                        # 各路由请求计数
   ```
@@ -186,7 +187,7 @@ dsh-client-ui-wallpaper/
 3. 推 tag 或手动触发 [`.github/workflows/publish.yml`](.github/workflows/publish.yml)：
 
 ```bash
-git tag v1.1.5 && git push origin v1.1.5   # tag 触发
+git tag v1.1.6 && git push origin v1.1.6   # tag 触发
 gh workflow run publish.yml                 # 或手动触发
 ```
 
@@ -196,8 +197,8 @@ gh workflow run publish.yml                 # 或手动触发
 **Release 附件**：
 
 ```bash
-git archive --format=zip -o dsh-client-ui-wallpaper-1.1.5.zip HEAD
-gh release create v1.1.5 dsh-client-ui-wallpaper-1.1.5.zip
+git archive --format=zip -o dsh-client-ui-wallpaper-1.1.6.zip HEAD
+gh release create v1.1.6 dsh-client-ui-wallpaper-1.1.6.zip
 ```
 
 **CI**：[`.github/workflows/check.yml`](.github/workflows/check.yml) 在 push / PR 时跑 `node scripts/check.mjs` 与 `node --test`，也是顶部徽章的来源；两个工作流的副本放在 `examples/` 下方便复制。
@@ -207,6 +208,7 @@ gh release create v1.1.5 dsh-client-ui-wallpaper-1.1.5.zip
 | 症状 | 原因 / 处理 |
 |---|---|
 | 壁纸没铺满 | 面板里确认已选壁纸；检查 `/wallpaper/list.json` 是否有素材 |
+| 点了壁纸，自动轮换就停了（1.1.5 及更早） | 面板手选曾经硬编码 `mode: "image"` / `mode: "video"`，等于顺手把轮换关掉；1.1.6 起改走 `modeAfterPick()`——轮换开着时手选只改当前位置，选中的素材不在轮换列表里也先显示它 |
 | 壁纸整块空白（面板一切正常） | 1.1.1 / 1.1.2 的已知缺陷：rotate 分支丢了 `var seconds` / `var index` 声明，`load()` 一进分支就抛 `ReferenceError`，又被静默的 `.catch` 吞掉 → 壁纸再也不绘制且毫无提示。升级到 1.1.3；之后若再遇到，读 `/wallpaper/_probe` 的 `loadFailure`（`{ at, name, message }`） |
 | DSH 升级后样式或自动字色悄悄没生效 | 1.1.5 起客户端每 60 秒体检一次界面挂钩，读 `/wallpaper/_probe` 的 `selectorHealth`：`missing` 列出失效的挂钩（`missing: []` 即正常），`detail` 给出每组的匹配数与命中的那条选择器；带锚点的组连续两轮落空才会告警，所以渲染中途不会误报。告警同时会 `console.warn("[dsh-wallpaper] UI 选择器失效：…")` |
 | 侧栏/右栏透明度拖了没反应 | 常见于「透明化扫描」清掉了底色；本版本已对右栏跳过扫描并直接写 `background-color`。若自行改过选择器，核对 `SIDEBAR_CSS` / `SIDEBAR_LEFT_CSS` |

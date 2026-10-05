@@ -40,6 +40,7 @@ const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 function makeHarness(listResult) {
   const painted = [];
   const intervals = [];
+  const intervalFns = [];
   const timeouts = [];
   const timeoutFns = [];
   const responses = Array.isArray(listResult) ? listResult.slice() : [listResult];
@@ -76,7 +77,7 @@ function makeHarness(listResult) {
     (i, total) => (i + 1) % total,
     (fn, delay) => { timeouts.push(delay); timeoutFns.push(fn); return timeouts.length; },
     () => {},
-    (fn, delay) => { intervals.push(delay); return intervals.length; },
+    (fn, delay) => { intervals.push(delay); intervalFns.push(fn); return intervals.length; },
     () => {},
     50 * 1024 * 1024,
     { warmed: 0, skipped: 0, dropped: 0, last: null },
@@ -85,8 +86,9 @@ function makeHarness(listResult) {
   );
 
   const runTimeout = async (i) => { timeoutFns[i](); await flush(); };
+  const runInterval = async (i) => { intervalFns[i](); await flush(); };
 
-  return { api, painted, intervals, timeouts, calls: () => listCalls, runTimeout, audits: () => audits };
+  return { api, painted, intervals, timeouts, calls: () => listCalls, runTimeout, runInterval, audits: () => audits };
 }
 
 const okList = (config, overrides = {}) => ({
@@ -193,4 +195,46 @@ test('轮换预热：list.json 未带大小时回退 HEAD 探测', async () => {
   const stats = h.api.peek().prewarm;
   assert.equal(stats.last.bytes, 1024, 'HEAD 兜底仍要工作（老宿主 + 新客户端）');
   assert.equal(stats.warmed, 1);
+});
+
+/**
+ * 1.1.6 回归：手动选一张壁纸只是「换当前这一张」，不能把自动轮换关掉。
+ * 面板曾经硬编码 save({ mode: "image" }) / save({ mode: "video" })，点任意缩略图轮换就停了。
+ */
+test('轮换选中：手选一张不在轮换列表里的静态图，先显示它、下一拍回到列表开头', async () => {
+  const h = makeHarness(okList(
+    { mode: 'rotate', rotateSeconds: 45, shuffle: false, image: 'x.png', autoInk: true },
+    { images: ['x.png'] },
+  ));
+  await h.api.load();
+  await flush();
+  assert.equal(h.painted.length, 1, 'rotate 分支仍然只画一次');
+  assert.equal(h.painted[0].name, 'x.png', '手选的图必须立刻显示，而不是被换成轮换列表第一项');
+  assert.deepEqual(h.intervals, [45000], '手选之后轮换定时器必须还在');
+  await h.runInterval(0);
+  assert.equal(h.painted[1].name, 'a.mp4', '下一拍回到轮换列表开头继续走');
+});
+
+test('轮换选中：手选一张不在轮换列表里的动态壁纸，同样先显示它再继续轮换', async () => {
+  const h = makeHarness(okList(
+    { mode: 'rotate', rotateSeconds: 30, shuffle: false, video: 'z.mp4', autoInk: true },
+    { videos: ['a.mp4', 'b.mp4', 'z.mp4'], sequence: [{ kind: 'video', name: 'a.mp4' }, { kind: 'video', name: 'b.mp4' }] },
+  ));
+  await h.api.load();
+  await flush();
+  assert.equal(h.painted[0].name, 'z.mp4', '手选的动态壁纸必须立刻显示');
+  assert.deepEqual(h.intervals, [30000]);
+  await h.runInterval(0);
+  assert.equal(h.painted[1].name, 'a.mp4');
+});
+
+test('轮换选中：同时给了视频与静态图时视频优先（点「▶ 动态」不会被静态图抢先）', async () => {
+  const h = makeHarness(okList(
+    { mode: 'rotate', rotateSeconds: 45, shuffle: false, video: 'v.mp4', image: 'x.png', autoInk: true },
+    { images: ['x.png'], videos: ['v.mp4'], sequence: [{ kind: 'image', name: 'x.png' }, { kind: 'video', name: 'v.mp4' }] },
+  ));
+  await h.api.load();
+  await flush();
+  assert.equal(h.painted.length, 1);
+  assert.equal(h.painted[0].name, 'v.mp4', '显式选的动态版必须优先于同一次手选里的静态图');
 });

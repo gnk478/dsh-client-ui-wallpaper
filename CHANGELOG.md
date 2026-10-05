@@ -1,5 +1,11 @@
 # 更新日志
 
+## 1.1.6 — 2026-10-06
+
+- **手选壁纸不再关掉自动轮换（修复）**：面板里点静态图缩略图 / 动态壁纸缩略图 / 「▶ 动态」按钮曾经硬编码 `mode: "image"` / `mode: "video"`，等于顺手把自动轮换关掉（1.1.1–1.1.5 一直如此）。现在统一走 `modeAfterPick(cfg.mode, fallback)`——轮换开着时手选只改「当前这一张」，`mode` 保持 `rotate`
+- **选中的素材不在轮换列表里也先显示它**：rotate 分支用 `locateIndex()` 定位起始项（先看显式选的动态版，再看静态图），命中就从它开始；未命中（`offList`）时 `index` 保持 -1、先只画这一张，下一拍 `nextIndex(-1, …)` 回到列表开头。客户端 `load()` 改用库内全量 `library` 校验 `config.image`（不再限制在轮换池内），宿主 `lib/index.js` 同样改为 `current.images.includes(wanted)`
+- **测试**：`test/rotate.test.mjs` +3 例（池外静态图 / 池外动态 / 动态优先）、`test/client.test.mjs` +3 例（`modeAfterPick`），`node --test` 共 52 例；`scripts/check.mjs` 加第 14 节 13 项
+
 ## 1.1.5 — 2026-10-06
 
 - **选择器失效不再静默（新）**：客户端每 60 秒体检 8 组界面挂钩（输入框 / 侧栏 / 右栏 / 弹窗 / 气泡 / 工具栏 / 头像 / 代码块，每组带 `selectors` 与「该界面是否在场」的 `anchor`）。带锚点的组连续两轮匹配为 0 才判定失效（`strikes >= 2`，避开 React 渲染中途的假警报），此时 `console.warn("[dsh-wallpaper] UI 选择器失效：…")` + `noteError("selector-missing", …)`；恢复后清空 `warned`，再次失效会重新告警。`selectorHealth`（`at/checks/missing/detail/strikes`）经 `/_probe` 与 `/_client` 可读，`detail` 给出每组命中的那条选择器与匹配数
