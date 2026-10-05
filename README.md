@@ -173,7 +173,7 @@ dsh-client-ui-wallpaper/
 
   ```bash
   node scripts/check.mjs
-  node --test                                          # 行为测试（宿主：路由 / 回收站 / 缩略图 GC；客户端：轮换加载与预热 / crossfade / 首帧就绪 / 图层审计 / applyVars / autoInk / classifyTile / syncBlur / 选择器体检 / 手选不打断轮换），1.1.6 起共 52 例
+  node --test                                          # 行为测试（宿主：路由 / 回收站 / 缩略图 GC；客户端：轮换加载与预热 / crossfade / 首帧就绪 / 图层审计 / applyVars / autoInk / classifyTile / syncBlur / 选择器体检 / 手选不打断轮换 / 手选点击留痕），1.1.7 起共 54 例
   curl -s http://127.0.0.1:19387/wallpaper/_client | python3 -m json.tool | head -40   # 客户端自报状态
   curl -s http://127.0.0.1:19387/wallpaper/_hits                                        # 各路由请求计数
   ```
@@ -187,7 +187,7 @@ dsh-client-ui-wallpaper/
 3. 推 tag 或手动触发 [`.github/workflows/publish.yml`](.github/workflows/publish.yml)：
 
 ```bash
-git tag v1.1.6 && git push origin v1.1.6   # tag 触发
+git tag v1.1.7 && git push origin v1.1.7   # tag 触发
 gh workflow run publish.yml                 # 或手动触发
 ```
 
@@ -197,8 +197,8 @@ gh workflow run publish.yml                 # 或手动触发
 **Release 附件**：
 
 ```bash
-git archive --format=zip -o dsh-client-ui-wallpaper-1.1.6.zip HEAD
-gh release create v1.1.6 dsh-client-ui-wallpaper-1.1.6.zip
+git archive --format=zip -o dsh-client-ui-wallpaper-1.1.7.zip HEAD
+gh release create v1.1.7 dsh-client-ui-wallpaper-1.1.7.zip
 ```
 
 **CI**：[`.github/workflows/check.yml`](.github/workflows/check.yml) 在 push / PR 时跑 `node scripts/check.mjs` 与 `node --test`，也是顶部徽章的来源；两个工作流的副本放在 `examples/` 下方便复制。
@@ -208,6 +208,7 @@ gh release create v1.1.6 dsh-client-ui-wallpaper-1.1.6.zip
 | 症状 | 原因 / 处理 |
 |---|---|
 | 壁纸没铺满 | 面板里确认已选壁纸；检查 `/wallpaper/list.json` 是否有素材 |
+| 点了壁纸完全没反应（1.1.6） | 面板 onClick 用的 `modeAfterPick()` 被定义在 `apply()` 内，闭包取不到 → 每次点击同步抛 `ReferenceError`，`save()` 从未执行。1.1.7 已把函数提升到工厂作用域；排查时读 `/wallpaper/_probe` 的 `panelPick`（点击计数：数字不涨 = 点击没进来；涨了但画面不变 = 状态没生效）与 `/_client` 的 `lastError` |
 | 点了壁纸，自动轮换就停了（1.1.5 及更早） | 面板手选曾经硬编码 `mode: "image"` / `mode: "video"`，等于顺手把轮换关掉；1.1.6 起改走 `modeAfterPick()`——轮换开着时手选只改当前位置，选中的素材不在轮换列表里也先显示它 |
 | 壁纸整块空白（面板一切正常） | 1.1.1 / 1.1.2 的已知缺陷：rotate 分支丢了 `var seconds` / `var index` 声明，`load()` 一进分支就抛 `ReferenceError`，又被静默的 `.catch` 吞掉 → 壁纸再也不绘制且毫无提示。升级到 1.1.3；之后若再遇到，读 `/wallpaper/_probe` 的 `loadFailure`（`{ at, name, message }`） |
 | DSH 升级后样式或自动字色悄悄没生效 | 1.1.5 起客户端每 60 秒体检一次界面挂钩，读 `/wallpaper/_probe` 的 `selectorHealth`：`missing` 列出失效的挂钩（`missing: []` 即正常），`detail` 给出每组的匹配数与命中的那条选择器；带锚点的组连续两轮落空才会告警，所以渲染中途不会误报。告警同时会 `console.warn("[dsh-wallpaper] UI 选择器失效：…")` |
